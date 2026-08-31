@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Thực Đơn - Koi Cafe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --coffee-dark: #3E2723; --gold: #FFC107; --bg-light: #fcf9f5; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-light); 
+            background-image: url('https://www.transparenttextures.com/patterns/food.png'); /* Vân chìm đồ ăn */
+        }
+        
+        .navbar-custom { background-color: var(--coffee-dark); padding: 15px 0; }
+        .navbar-brand { font-size: 1.5rem; font-weight: 700; color: var(--gold) !important; }
+        .nav-link { color: white !important; font-weight: 500; margin: 0 10px; }
+        .nav-link:hover, .nav-link.active { color: var(--gold) !important; }
+        
+        /* HIỆU ỨNG PARALLAX BANNER THỰC ĐƠN */
+        .menu-hero {
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1559525839-b184a4d698c7?q=80&w=1920') center/cover;
+            background-attachment: fixed;
+            height: 35vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; text-align: center; margin-bottom: 40px;
+        }
+
+        .cat-title { border-bottom: 3px solid var(--gold); display: inline-block; padding-bottom: 5px; color: var(--coffee-dark); font-weight: 800; margin-top: 40px; margin-bottom: 25px;}
+        
+        /* HIỆU ỨNG KÍNH MỜ CHO THẺ */
+        .menu-card { 
+            border: none; border-radius: 15px; overflow: hidden; transition: 0.3s; 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+        }
+        .menu-card:hover { transform: translateY(-8px); box-shadow: 0 15px 30px rgba(93,64,55,0.2); border-color: var(--gold); }
+        .menu-img { height: 200px; width: 100%; object-fit: cover; transition: 0.5s ease; }
+        .menu-card:hover .menu-img { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="fas fa-mug-hot"></i> KOI CAFE</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Trang Chủ</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/menu">Thực Đơn</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- BANNER PARALLAX MỚI -->
+    <header class="menu-hero shadow-lg">
+        <div class="container">
+            <h1 class="display-4 fw-bold text-warning mb-3" style="letter-spacing: 2px;">THỰC ĐƠN ĐẶC BIỆT</h1>
+            <p class="fs-5">Tuyển tập những hương vị được yêu thích nhất tại Koi Cafe</p>
+        </div>
+    </header>
+
+    <button class="btn btn-danger position-fixed bottom-0 end-0 m-4 rounded-circle shadow-lg d-flex align-items-center justify-content-center" 
+            style="width: 70px; height: 70px; z-index: 1000;" data-bs-toggle="modal" data-bs-target="#cartModal">
+        <i class="fas fa-shopping-cart fs-3"></i>
+        <span id="cartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark border border-light fs-6 px-2">0</span>
+    </button>
+
+    <div class="container pb-5">
+        <% categories.forEach(function(dm) { %>
+            <% const spTrongDM = products.filter(p => p.TenDM === dm.TenDM); %>
+            <% if(spTrongDM.length > 0) { %>
+                <h3 class="cat-title"><i class="fas fa-coffee text-warning"></i> <%= dm.TenDM %></h3>
+                <div class="row g-4">
+                    <% spTrongDM.forEach(function(sp) { %>
+                        <div class="col-md-3 col-6">
+                            <div class="card menu-card h-100">
+                                <div style="overflow: hidden;">
+                                    <img src="<%= sp.HinhAnh ? sp.HinhAnh : 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=300' %>" class="menu-img">
+                                </div>
+                                <div class="card-body text-center d-flex flex-column justify-content-between">
+                                    <h6 class="card-title fw-bold text-dark mb-3"><%= sp.TenSP %></h6>
+                                    <div>
+                                        <p class="text-danger fw-bold fs-5 mb-2"><%= sp.DonGia.toLocaleString('vi-VN') %> đ</p>
+                                        <button class="btn btn-outline-danger btn-sm rounded-pill w-100 fw-bold" 
+                                                onclick="addOnlineCart('<%= sp.MaSP %>', '<%= sp.TenSP %>', <%= sp.DonGia %>)">
+                                            <i class="fas fa-plus"></i> CHỌN MUA
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
+        <% }); %>
+    </div>
+
+    <!-- POPUP GIỎ HÀNG ONLINE BÊN DƯỚI GIỮ NGUYÊN NHƯ CŨ -->
+    <div class="modal fade" id="cartModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-shopping-bag"></i> Giỏ Hàng Của Bạn</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-7 border-end" id="cartItemsContainer">
+                            <p class="text-muted text-center mt-4">Giỏ hàng đang trống.</p>
+                        </div>
+                        <div class="col-md-5">
+                            <h6 class="fw-bold text-primary mb-3">Thông tin giao hàng</h6>
+                            <input type="text" class="form-control mb-2" id="cartName" placeholder="Tên người nhận (*)">
+                            <input type="text" class="form-control mb-2" id="cartPhone" placeholder="Số điện thoại (*)">
+                            <textarea class="form-control mb-2" id="cartAddress" rows="2" placeholder="Địa chỉ giao hàng (*)"></textarea>
+                            <div class="border-top pt-3 mt-3">
+                                <div class="d-flex justify-content-between fw-bold fs-5">
+                                    <span>TỔNG TIỀN:</span>
+                                    <span class="text-danger" id="cartTotal">0 đ</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-success w-100 fw-bold mt-3 py-2" onclick="submitOnlineOrder()">ĐẶT HÀNG NGAY</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let onlineCart = [];
+        let currentSubtotal = 0; 
+
+        function addOnlineCart(maSP, tenSP, donGia) {
+            let existing = onlineCart.find(item => item.maSP === maSP);
+            if (existing) existing.soLuong += 1; 
+            else onlineCart.push({ maSP, tenSP, donGia, soLuong: 1 });
+            renderOnlineCart();
+            alert('Đã thêm ' + tenSP + ' vào giỏ hàng!');
+        }
+
+        function changeQty(index, delta) {
+            onlineCart[index].soLuong += delta;
+            if(onlineCart[index].soLuong <= 0) onlineCart.splice(index, 1);
+            renderOnlineCart();
+        }
+
+        function renderOnlineCart() {
+            let html = ''; currentSubtotal = 0; let totalItems = 0;
+            if (onlineCart.length === 0) {
+                document.getElementById('cartItemsContainer').innerHTML = '<p class="text-muted text-center mt-4">Giỏ hàng đang trống.</p>';
+            } else {
+                onlineCart.forEach((item, index) => {
+                    let thanhTien = item.donGia * item.soLuong;
+                    currentSubtotal += thanhTien; totalItems += item.soLuong;
+                    html += `
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                            <div><div class="fw-bold">${item.tenSP}</div><div class="text-muted small">${item.donGia.toLocaleString('vi-VN')} đ</div></div>
+                            <div class="d-flex align-items-center">
+                                <button class="btn btn-sm btn-outline-secondary px-2" onclick="changeQty(${index}, -1)">-</button>
+                                <span class="mx-2 fw-bold">${item.soLuong}</span>
+                                <button class="btn btn-sm btn-outline-secondary px-2" onclick="changeQty(${index}, 1)">+</button>
+                            </div>
+                            <div class="text-danger fw-bold ms-3">${thanhTien.toLocaleString('vi-VN')} đ</div>
+                        </div>`;
+                });
+                document.getElementById('cartItemsContainer').innerHTML = html;
+            }
+            document.getElementById('cartTotal').innerText = currentSubtotal.toLocaleString('vi-VN') + ' đ';
+            document.getElementById('cartCount').innerText = totalItems;
+        }
+
+        function submitOnlineOrder() {
+            if(onlineCart.length === 0) return alert("Giỏ hàng đang trống!");
+            const data = {
+                tenKhach: document.getElementById('cartName').value,
+                sdt: document.getElementById('cartPhone').value,
+                diaChi: document.getElementById('cartAddress').value,
+                cart: onlineCart
+            };
+            if(!data.tenKhach || !data.sdt || !data.diaChi) return alert("Vui lòng điền đủ Tên, SĐT và Địa chỉ!");
+
+            fetch('/api/order-online', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(res => res.json()).then(result => {
+                if(result.success) { alert("🎉 Đặt hàng thành công!"); location.reload(); } 
+                else { alert("❌ Lỗi đặt hàng!"); }
+            });
+        }
+    </script>
+</body>
+</html>

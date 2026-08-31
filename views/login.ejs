@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng nhập Nội Bộ - Koi Cafe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, rgba(62,39,35,0.9), rgba(93,64,55,0.9)), url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1920') center/cover; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        .login-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 15px 30px rgba(0,0,0,0.5); width: 100%; max-width: 400px; text-align: center; position: relative; overflow: hidden; }
+        .login-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 5px; background: #FFC107; }
+        .login-logo { font-size: 3.5rem; color: #5D4037; margin-bottom: 10px; }
+        .form-control { padding: 12px; border-radius: 8px; border: 1px solid #ced4da; }
+        .form-control:focus { border-color: #FFC107; box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25); }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <i class="fas fa-mug-hot login-logo"></i>
+        <h3 class="fw-bold text-dark mb-4" style="letter-spacing: 1px;">KOI CAFE POS</h3>
+        
+        <% if(error) { %>
+            <div class="alert alert-danger fw-bold small"><i class="fas fa-exclamation-triangle"></i> <%= error %></div>
+        <% } %>
+
+        <form action="/login" method="POST">
+            <div class="mb-3 text-start">
+                <label class="fw-bold text-muted small mb-1">Tên đăng nhập</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-user"></i></span>
+                    <input type="text" class="form-control" name="username" placeholder="Nhập tài khoản của bạn..." required>
+                </div>
+            </div>
+            <div class="mb-4 text-start">
+                <label class="fw-bold text-muted small mb-1">Mật khẩu</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="fas fa-lock"></i></span>
+                    <input type="password" class="form-control" name="password" placeholder="Nhập mật khẩu..." required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-warning text-dark w-100 fw-bold py-2 fs-5 shadow-sm">ĐĂNG NHẬP</button>
+        </form>
+        <div class="mt-4 pt-3 border-top small fw-bold">
+            <a href="/" class="text-secondary text-decoration-none"><i class="fas fa-arrow-left"></i> Về Trang chủ Khách hàng</a>
+        </div>
+    </div>
+</body>
+</html>

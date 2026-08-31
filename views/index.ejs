@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Trang Chủ - Koi Cafe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { --coffee-dark: #3E2723; --gold: #FFC107; --bg-light: #fcf9f5; }
+        
+        /* HIỆU ỨNG NỀN HỌA TIẾT CHÌM CHO TOÀN TRANG */
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background-color: var(--bg-light); 
+            background-image: url('https://www.transparenttextures.com/patterns/food.png'); /* Vân chìm đồ ăn */
+        }
+        
+        .navbar-custom { background-color: var(--coffee-dark); padding: 15px 0; }
+        .navbar-brand { font-size: 1.5rem; font-weight: 700; color: var(--gold) !important; letter-spacing: 2px; }
+        .nav-link { color: white !important; font-weight: 500; margin: 0 10px; transition: 0.3s; }
+        .nav-link:hover, .nav-link.active { color: var(--gold) !important; }
+        
+        /* HIỆU ỨNG PARALLAX CHO ẢNH BÌA */
+        .hero-section { 
+            background: linear-gradient(rgba(62,39,35,0.7), rgba(62,39,35,0.7)), url('https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1920') center/cover; 
+            background-attachment: fixed; /* Đây là lệnh tạo hiệu ứng cuộn 3D */
+            height: 70vh; display: flex; align-items: center; justify-content: center; color: white; text-align: center; 
+        }
+        
+        .section-title { color: var(--coffee-dark); font-weight: 800; text-align: center; margin-bottom: 40px; position: relative; }
+        .section-title::after { content: ""; width: 80px; height: 3px; background-color: var(--gold); position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); }
+        
+        .promo-card { border-radius: 15px; overflow: hidden; border: none; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .promo-img { height: 200px; object-fit: cover; width: 100%; }
+        
+        /* HIỆU ỨNG KÍNH MỜ CHO THẺ MÓN ĂN */
+        .menu-card { 
+            border: none; border-radius: 15px; overflow: hidden; transition: 0.3s; 
+            background: rgba(255, 255, 255, 0.9); /* Làm trong suốt 10% */
+            backdrop-filter: blur(5px); /* Hiệu ứng kính mờ */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); 
+        }
+        .menu-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(93,64,55,0.2); }
+        .menu-img { height: 220px; width: 100%; object-fit: cover; transition: 0.5s ease; }
+        .menu-card:hover .menu-img { transform: scale(1.1); }
+        .footer { background-color: var(--coffee-dark); color: white; padding: 40px 0 20px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="fas fa-mug-hot"></i> KOI CAFE</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="/">Trang Chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/menu">Thực Đơn</a></li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    <a href="/login" class="btn btn-outline-warning rounded-pill px-4 fw-bold me-3"><i class="fas fa-user-circle"></i> Nội Bộ</a>
+                    <button class="btn btn-warning rounded-pill px-4 fw-bold" onclick="alert('Tính năng đặt bàn khách hàng đang phát triển')">Đặt Bàn</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero-section">
+        <div class="container">
+            <h1 class="display-3 fw-bold mb-3">Hương Vị Nguyên Bản</h1>
+            <p class="fs-5 mb-4">Khơi nguồn cảm hứng mỗi ngày với những hạt cà phê rang xay thượng hạng.</p>
+            <a href="/menu" class="btn btn-warning btn-lg rounded-pill fw-bold px-5 py-3 shadow">ĐẶT HÀNG NGAY</a>
+        </div>
+    </header>
+
+    <section class="container py-5 mt-4">
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-4">
+                <img src="https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=800" class="img-fluid rounded-4 shadow-lg" alt="About Us">
+            </div>
+            <div class="col-md-6 px-4">
+                <h3 class="fw-bold text-dark mb-3">Câu Chuyện Của Koi Cafe</h3>
+                <p class="text-muted" style="line-height: 1.8;">Bắt đầu từ một xưởng rang xay nhỏ vào năm 2018, Koi Cafe ra đời với sứ mệnh mang đến những ly cà phê đậm vị, chuẩn gu người Việt. Chúng tôi lựa chọn tỉ mỉ từng hạt Robusta từ cao nguyên đất đỏ bazan, kết hợp với công thức pha chế độc quyền để tạo ra trải nghiệm khó quên.</p>
+                <ul class="list-unstyled fw-bold text-dark mt-3">
+                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> 100% Cà phê sạch, không độn hóa chất.</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> Không gian yên tĩnh, lý tưởng để làm việc.</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i> Giao hàng tận nơi siêu tốc trong 30 phút.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-light py-5" style="background-image: url('https://www.transparenttextures.com/patterns/food.png');">
+        <div class="container">
+            <h2 class="section-title">CHƯƠNG TRÌNH ƯU ĐÃI</h2>
+            <div class="row g-4 mt-2">
+                <div class="col-md-6">
+                    <div class="card promo-card">
+                        <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?q=80&w=800" class="promo-img">
+                        <div class="card-body text-center bg-dark text-white p-4">
+                            <h4 class="fw-bold text-warning">COMBO CHÀO BUỔI SÁNG</h4>
+                            <p>Tặng ngay 1 Bánh sừng bò khi mua 1 Cà phê size L trước 9h sáng.</p>
+                            <span class="badge bg-warning text-dark fs-6 px-3 py-2">Mã: MORNING26</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card promo-card">
+                        <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800" class="promo-img">
+                        <div class="card-body text-center bg-danger text-white p-4">
+                            <h4 class="fw-bold">FREESHIP ĐƠN TỪ 99K</h4>
+                            <p>Miễn phí giao hàng tận nơi cho hóa đơn từ 99.000đ trong bán kính 3km.</p>
+                            <span class="badge bg-light text-danger fs-6 px-3 py-2">Mã: FREESHIP</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container py-5 my-4">
+        <h2 class="section-title">TOP BÁN CHẠY NHẤT</h2>
+        <div class="row g-4 mt-2">
+            <% topProducts.forEach(function(sp) { %>
+                <div class="col-md-3 col-6">
+                    <div class="card menu-card h-100">
+                        <div style="overflow: hidden; height: 220px;">
+                            <img src="<%= sp.HinhAnh ? sp.HinhAnh : 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=300' %>" class="menu-img">
+                        </div>
+                        <div class="card-body text-center d-flex flex-column justify-content-between">
+                            <div>
+                                <span class="badge bg-danger mb-2"><i class="fas fa-fire"></i> Best Seller</span>
+                                <h5 class="card-title fw-bold text-dark"><%= sp.TenSP %></h5>
+                            </div>
+                            <div class="mt-3">
+                                <p class="text-danger fw-bold fs-5 mb-2"><%= sp.DonGia.toLocaleString('vi-VN') %> đ</p>
+                                <a href="/menu" class="btn btn-outline-dark btn-sm rounded-pill w-100 fw-bold">Mua Ngay</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+        <div class="text-center mt-5">
+            <a href="/menu" class="btn btn-dark fw-bold px-5 py-3 rounded-pill">XEM TOÀN BỘ THỰC ĐƠN <i class="fas fa-arrow-right ms-2"></i></a>
+        </div>
+    </section>
+
+    <footer class="footer text-center"><div class="container"><h4 class="text-warning fw-bold mb-2"><i class="fas fa-mug-hot"></i> KOI CAFE</h4><p class="text-white-50">© 2026 Bản quyền thuộc về Koi Cafe</p></div></footer>
+</body>
+</html>

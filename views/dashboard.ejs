@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Bảng Điều Khiển - Koi Cafe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f6f9; overflow-x: hidden; }
+        
+        /* Cấu trúc Sidebar */
+        .sidebar { min-height: 100vh; width: 260px; background-color: #343a40; transition: 0.3s; z-index: 100; position: fixed;}
+        .sidebar-brand { height: 70px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #FFC107; font-weight: 800; letter-spacing: 2px; border-bottom: 1px solid #4b545c; }
+        .nav-sidebar .nav-item { margin-bottom: 5px; }
+        .nav-sidebar .nav-link { color: #c2c7d0; padding: 12px 20px; border-radius: 5px; margin: 0 10px; transition: 0.2s; font-weight: 500; }
+        .nav-sidebar .nav-link:hover, .nav-sidebar .nav-link.active { background-color: #FFC107; color: #212529; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .nav-sidebar .nav-link i { width: 25px; font-size: 1.1rem; text-align: center; margin-right: 8px; }
+        
+        /* Khu vực Nội dung chính */
+        .main-content { margin-left: 260px; padding: 20px 30px; transition: 0.3s; }
+        .topbar { background: white; height: 70px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 30px; }
+        
+        /* Card Thống kê */
+        .stat-card { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; color: white; overflow: hidden; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .stat-icon { font-size: 3.5rem; opacity: 0.3; position: absolute; right: -10px; bottom: -15px; transition: 0.3s; }
+        .stat-card:hover .stat-icon { transform: scale(1.1) rotate(-10deg); opacity: 0.5; }
+        
+        /* Biểu đồ */
+        .chart-container { background: white; border-radius: 15px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR (MENU TRÁI) -->
+    <div class="sidebar shadow-lg">
+        <div class="sidebar-brand">
+            <i class="fas fa-mug-hot me-2"></i> KOI CAFE
+        </div>
+        <div class="mt-4 pb-3 mb-3 border-bottom border-secondary text-center px-3">
+            <div class="text-white fw-bold fs-6">👨‍💼 Quản trị viên</div>
+            <small class="text-warning"><i class="fas fa-circle text-success" style="font-size: 10px;"></i> Đang hoạt động</small>
+        </div>
+        <ul class="nav nav-sidebar flex-column">
+            <li class="nav-item"><a class="nav-link active" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Tổng Quan</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/pos" style="background-color: #28a745;"><i class="fas fa-desktop"></i> POS Bán Hàng</a></li>
+            <li class="nav-item"><a class="nav-link" href="/orders"><i class="fas fa-motorcycle"></i> Đơn Giao Đi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Hóa Đơn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/bookings"><i class="fas fa-calendar-check"></i> Đặt Bàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/vouchers"><i class="fas fa-ticket-alt"></i> Khuyến Mãi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/products"><i class="fas fa-coffee"></i> Sản Phẩm</a></li>
+            <li class="nav-item"><a class="nav-link" href="/tables"><i class="fas fa-chair"></i> Sơ Đồ Bàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/employees"><i class="fas fa-users"></i> Nhân Sự</a></li>
+        </ul>
+    </div>
+
+    <!-- MAIN CONTENT (NỘI DUNG CHÍNH) -->
+    <div class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <h4 class="fw-bold text-dark m-0"><i class="fas fa-chart-line text-primary me-2"></i> BẢNG ĐIỀU KHIỂN</h4>
+            <div class="d-flex align-items-center">
+                <a href="/" target="_blank" class="btn btn-outline-dark btn-sm fw-bold me-3"><i class="fas fa-globe"></i> Mở Web Khách</a>
+                <a href="/login" class="btn btn-danger btn-sm fw-bold"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
+            </div>
+        </div>
+
+        <!-- 4 Cục Thống Kê Tổng Quan -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card stat-card bg-primary h-100 p-3 position-relative">
+                    <h6 class="fw-bold text-uppercase mb-1 text-light">Tổng Doanh Thu</h6>
+                    <h3 class="fw-bold mb-0"><%= doanhThu.toLocaleString('vi-VN') %> đ</h3>
+                    <i class="fas fa-wallet stat-icon"></i>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card stat-card bg-success h-100 p-3 position-relative">
+                    <h6 class="fw-bold text-uppercase mb-1 text-light">Đơn Hoàn Thành</h6>
+                    <h3 class="fw-bold mb-0"><%= soDon %> <span class="fs-6 fw-normal">Đơn</span></h3>
+                    <i class="fas fa-check-circle stat-icon"></i>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card stat-card bg-warning text-dark h-100 p-3 position-relative">
+                    <h6 class="fw-bold text-uppercase mb-1 text-dark">Bàn Đang Trống</h6>
+                    <h3 class="fw-bold mb-0"><%= banTrong %> <span class="fs-6 fw-normal">Bàn</span></h3>
+                    <i class="fas fa-chair stat-icon"></i>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card stat-card bg-danger h-100 p-3 position-relative">
+                    <h6 class="fw-bold text-uppercase mb-1 text-light">Món Đang Bán</h6>
+                    <h3 class="fw-bold mb-0"><%= tongMon %> <span class="fs-6 fw-normal">Món</span></h3>
+                    <i class="fas fa-coffee stat-icon"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Khu vực Vẽ Biểu Đồ -->
+        <div class="row g-4">
+            <!-- Biểu đồ 1 -->
+            <div class="col-lg-8">
+                <div class="chart-container">
+                    <h5 class="fw-bold text-dark mb-4 border-bottom pb-2">Top 5 Sản Phẩm Bán Chạy Nhất</h5>
+                    <canvas id="topProductsChart" height="100"></canvas>
+                </div>
+            </div>
+            
+            <!-- Biểu đồ 2 -->
+            <div class="col-lg-4">
+                <div class="chart-container">
+                    <h5 class="fw-bold text-dark mb-4 border-bottom pb-2">Doanh Thu Nhân Viên</h5>
+                    <canvas id="revenueByEmployeeChart" height="230"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Vẽ Biểu đồ -->
+    <script>
+        const rawProductsData = '<%- chartDataProducts %>';
+        const rawRevenueData = '<%- chartDataRevenue %>';
+        const productsData = JSON.parse(rawProductsData);
+        const revenueData = JSON.parse(rawRevenueData);
+
+        const ctxProducts = document.getElementById('topProductsChart').getContext('2d');
+        new Chart(ctxProducts, {
+            type: 'bar',
+            data: {
+                labels: productsData.map(item => item.TenSP),
+                datasets: [{
+                    label: 'Số lượng đã bán',
+                    data: productsData.map(item => item.TongSoLuong),
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        const ctxRevenue = document.getElementById('revenueByEmployeeChart').getContext('2d');
+        new Chart(ctxRevenue, {
+            type: 'doughnut',
+            data: {
+                labels: revenueData.map(item => item.TenNV),
+                datasets: [{
+                    data: revenueData.map(item => item.DoanhThu),
+                    backgroundColor: ['#ff9999','#66b3ff','#99ff99','#ffcc99','#c2c2f0']
+                }]
+            },
+            options: { cutout: '60%' }
+        });
+    </script>
+</body>
+</html>

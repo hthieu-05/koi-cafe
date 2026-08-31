@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Nhân Sự - Koi Cafe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f6f9; overflow-x: hidden; }
+        .sidebar { min-height: 100vh; width: 260px; background-color: #343a40; position: fixed;}
+        .sidebar-brand { height: 70px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #FFC107; font-weight: 800; border-bottom: 1px solid #4b545c; }
+        .nav-sidebar .nav-link { color: #c2c7d0; padding: 12px 20px; border-radius: 5px; margin: 5px 10px; font-weight: 500; }
+        .nav-sidebar .nav-link:hover, .nav-sidebar .nav-link.active { background-color: #FFC107; color: #212529; font-weight: bold; }
+        .nav-sidebar .nav-link i { width: 25px; text-align: center; margin-right: 8px; }
+        .main-content { margin-left: 260px; padding: 20px 30px; }
+        .topbar { background: white; height: 70px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 30px; }
+        .card-custom { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); overflow: hidden; background: white; }
+    </style>
+</head>
+<body>
+    <div class="sidebar shadow-lg">
+        <div class="sidebar-brand"><i class="fas fa-mug-hot me-2"></i> KOI CAFE</div>
+        <div class="mt-4 pb-3 mb-3 border-bottom border-secondary text-center"><div class="text-white fw-bold">👨‍💼 Quản trị viên</div></div>
+        <ul class="nav nav-sidebar flex-column">
+            <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Tổng Quan</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/pos" style="background-color: #28a745;"><i class="fas fa-desktop"></i> POS Bán Hàng</a></li>
+            <li class="nav-item"><a class="nav-link" href="/orders"><i class="fas fa-motorcycle"></i> Đơn Giao Đi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Hóa Đơn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/bookings"><i class="fas fa-calendar-check"></i> Đặt Bàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/vouchers"><i class="fas fa-ticket-alt"></i> Khuyến Mãi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/products"><i class="fas fa-coffee"></i> Sản Phẩm</a></li>
+            <li class="nav-item"><a class="nav-link" href="/tables"><i class="fas fa-chair"></i> Sơ Đồ Bàn</a></li>
+            <li class="nav-item"><a class="nav-link active" href="/employees"><i class="fas fa-users"></i> Nhân Sự</a></li>
+        </ul>
+    </div>
+    
+    <div class="main-content">
+        <div class="topbar">
+            <h4 class="fw-bold text-dark m-0"><i class="fas fa-users text-primary me-2"></i> QUẢN LÝ NHÂN SỰ</h4>
+            <button class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#addEmployeeModal"><i class="fas fa-user-plus"></i> Thêm Nhân Viên</button>
+        </div>
+
+        <div class="card-custom p-0">
+            <table class="table table-hover text-center align-middle mb-0">
+                <thead class="table-primary text-dark">
+                    <tr>
+                        <th>Mã NV</th>
+                        <th>Họ Tên</th>
+                        <th>Chức Vụ</th>
+                        <th>Liên Hệ</th>
+                        <th>Ngày Vào Làm</th>
+                        <th>Tài khoản Login</th>
+                        <th>Hành Động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% employees.forEach(function(nv) { %>
+                        <tr>
+                            <td class="fw-bold text-muted">NV<%= nv.MaNV %></td>
+                            <td class="fw-bold text-primary text-start ps-4"><i class="fas fa-user-circle me-2"></i> <%= nv.TenNV %></td>
+                            <td><span class="badge bg-secondary"><%= nv.ChucVu %></span></td>
+                            <td><%= nv.SoDienThoai %><br><small class="text-muted"><%= nv.Email %></small></td>
+                            <td><%= new Date(nv.NgayVaoLam).toLocaleDateString('vi-VN') %></td>
+                            <td>
+                                <% if(nv.TenDangNhap) { %> 
+                                    <span class="text-success fw-bold"><i class="fas fa-check"></i> <%= nv.TenDangNhap %></span>
+                                    <br><small class="text-muted">(Quyền: <%= nv.VaiTro %>)</small>
+                                <% } else { %> 
+                                    <span class="text-muted fst-italic">Chưa cấp</span> 
+                                <% } %>
+                            </td>
+                            <td>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <!-- Nút Sửa thông tin / Chức vụ -->
+                                    <button class="btn btn-sm btn-outline-primary fw-bold" 
+                                            onclick="openEditModal('<%= nv.MaNV %>', '<%= nv.TenNV %>', '<%= nv.SoDienThoai %>', '<%= nv.ChucVu %>')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    
+                                    <!-- Nút Cấp tài khoản -->
+                                    <button class="btn btn-sm btn-success fw-bold" 
+                                            onclick="openAccountModal('<%= nv.MaNV %>', '<%= nv.TenNV %>')">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+
+                                    <!-- Nút Xóa (MỚI) -->
+                                    <form action="/employees/delete" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa nhân viên này?');">
+                                        <input type="hidden" name="maNV" value="<%= nv.MaNV %>">
+                                        <button type="submit" class="btn btn-sm btn-danger fw-bold">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 1. Modal Thêm Nhân Viên -->
+    <div class="modal fade" id="addEmployeeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">Thêm Nhân Sự Mới</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form action="/employees/add" method="POST">
+                        <div class="mb-3"><input type="text" class="form-control" name="tenNV" placeholder="Họ và Tên (*)" required></div>
+                        <div class="row mb-3">
+                            <div class="col-6"><input type="text" class="form-control" name="soDienThoai" placeholder="Số điện thoại" required></div>
+                            <div class="col-6"><input type="email" class="form-control" name="email" placeholder="Email (Tùy chọn)"></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6"><input type="date" class="form-control" name="ngayVaoLam" required></div>
+                            <div class="col-6">
+                                <select class="form-select" name="chucVu" required>
+                                    <option value="Phục vụ">Phục vụ</option><option value="Pha chế">Pha chế</option><option value="Thu ngân">Thu ngân</option><option value="Quản lý">Quản lý</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">LƯU HỒ SƠ</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Modal Sửa Nhân Viên (Mới) -->
+    <div class="modal fade" id="editEmployeeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-primary border-2">
+                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold"><i class="fas fa-edit"></i> Sửa Thông Tin Nhân Sự</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <form action="/employees/edit" method="POST">
+                        <input type="hidden" id="editMaNV" name="maNV">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Họ và tên</label>
+                            <input type="text" class="form-control" id="editTenNV" name="tenNV" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Số điện thoại</label>
+                            <input type="text" class="form-control" id="editSDT" name="soDienThoai" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Chức vụ</label>
+                            <select class="form-select" id="editChucVu" name="chucVu" required>
+                                <option value="Phục vụ">Phục vụ</option>
+                                <option value="Pha chế">Pha chế</option>
+                                <option value="Thu ngân">Thu ngân</option>
+                                <option value="Quản lý">Quản lý</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">LƯU THAY ĐỔI</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Modal Cấp Tài Khoản (Mới) -->
+    <div class="modal fade" id="accountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-success border-2">
+                <div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold"><i class="fas fa-key"></i> Cấp Tài Khoản Đăng Nhập</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <form action="/employees/create-account" method="POST">
+                        <input type="hidden" id="accMaNV" name="maNV">
+                        <div class="mb-3 text-center">
+                            <span class="text-muted">Cấp tài khoản cho nhân viên:</span>
+                            <h4 class="fw-bold text-success" id="accTenNV"></h4>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Tên đăng nhập (Username)</label>
+                            <input type="text" class="form-control" name="tenDangNhap" placeholder="VD: dungvh, hieunv..." required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Mật khẩu (Password)</label>
+                            <input type="password" class="form-control" name="matKhau" placeholder="Nhập mật khẩu..." required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-muted">Quyền hạn hệ thống (Vai trò)</label>
+                            <select class="form-select" name="vaiTro" required>
+                                <option value="NhanVien">Nhân viên (POS & Đơn hàng)</option>
+                                <option value="Admin">Quản trị viên (Toàn quyền)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow">XÁC NHẬN CẤP TÀI KHOẢN</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mở modal sửa nhân viên
+        function openEditModal(maNV, tenNV, sdt, chucVu) {
+            document.getElementById('editMaNV').value = maNV;
+            document.getElementById('editTenNV').value = tenNV;
+            document.getElementById('editSDT').value = sdt;
+            document.getElementById('editChucVu').value = chucVu;
+            var myModal = new bootstrap.Modal(document.getElementById('editEmployeeModal'));
+            myModal.show();
+        }
+
+        // Mở modal cấp tài khoản
+        function openAccountModal(maNV, tenNV) {
+            document.getElementById('accMaNV').value = maNV;
+            document.getElementById('accTenNV').innerText = tenNV;
+            var myModal = new bootstrap.Modal(document.getElementById('accountModal'));
+            myModal.show();
+        }
+    </script>
+</body>
+</html>

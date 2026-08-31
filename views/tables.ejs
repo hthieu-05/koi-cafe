@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sơ Đồ Bàn - Koi Cafe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f6f9; overflow-x: hidden; }
+        .sidebar { min-height: 100vh; width: 260px; background-color: #343a40; position: fixed;}
+        .sidebar-brand { height: 70px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #FFC107; font-weight: 800; border-bottom: 1px solid #4b545c; }
+        .nav-sidebar .nav-link { color: #c2c7d0; padding: 12px 20px; border-radius: 5px; margin: 5px 10px; font-weight: 500; }
+        .nav-sidebar .nav-link:hover, .nav-sidebar .nav-link.active { background-color: #FFC107; color: #212529; font-weight: bold; }
+        .nav-sidebar .nav-link i { width: 25px; text-align: center; margin-right: 8px; }
+        .main-content { margin-left: 260px; padding: 20px 30px; }
+        .topbar { background: white; height: 70px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 30px; }
+        .table-card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s; color: white; text-align: center; padding: 20px 10px; cursor: pointer; position: relative;}
+        .table-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
+        .table-icon { font-size: 3rem; margin-bottom: 10px; }
+        .nav-tabs .nav-link { font-weight: bold; color: #495057; border-radius: 10px 10px 0 0; padding: 12px 25px; }
+        .nav-tabs .nav-link.active { color: #FFC107; background-color: #343a40; border-color: #343a40; }
+    </style>
+</head>
+<body>
+    <div class="sidebar shadow-lg">
+        <div class="sidebar-brand"><i class="fas fa-mug-hot me-2"></i> KOI CAFE</div>
+        <div class="mt-4 pb-3 mb-3 border-bottom border-secondary text-center"><div class="text-white fw-bold">👨‍💼 Quản trị viên</div></div>
+        <ul class="nav nav-sidebar flex-column">
+            <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Tổng Quan</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/pos" style="background-color: #28a745;"><i class="fas fa-desktop"></i> POS Bán Hàng</a></li>
+            <li class="nav-item"><a class="nav-link" href="/orders"><i class="fas fa-motorcycle"></i> Đơn Giao Đi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Hóa Đơn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/bookings"><i class="fas fa-calendar-check"></i> Đặt Bàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/vouchers"><i class="fas fa-ticket-alt"></i> Khuyến Mãi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/products"><i class="fas fa-coffee"></i> Sản Phẩm</a></li>
+            <li class="nav-item"><a class="nav-link active" href="/tables"><i class="fas fa-chair"></i> Sơ Đồ Bàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/employees"><i class="fas fa-users"></i> Nhân Sự</a></li>
+        </ul>
+    </div>
+    
+    <div class="main-content">
+        <div class="topbar">
+            <h4 class="fw-bold text-dark m-0"><i class="fas fa-th-large text-warning me-2"></i> QUẢN LÝ SƠ ĐỒ BÀN</h4>
+            <button class="btn btn-warning fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#addTableModal"><i class="fas fa-plus"></i> Thêm Bàn Mới</button>
+        </div>
+
+        <ul class="nav nav-tabs mb-4" id="tableZones" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#khuA">KHU A (Ngoài Trời)</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#khuB">KHU B (Trong Nhà)</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#khuC">KHU C (Tầng 2)</button></li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- KHU A -->
+            <div class="tab-pane fade show active" id="khuA">
+                <div class="row g-4">
+                    <% tables.filter(t => t.KhuVuc === 'Khu A (Ngoài trời)').forEach(function(b) { %>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <div class="card table-card <%= b.TrangThai === 'Trong' ? 'bg-success' : 'bg-danger' %>" 
+                                 onclick="openTableAction('<%= b.MaBan %>', '<%= b.TenBan %>', '<%= b.TrangThai %>', '<%= b.KhuVuc %>')">
+                                <i class="fas fa-chair table-icon"></i>
+                                <h5 class="fw-bold mb-1">Bàn <%= b.TenBan %></h5>
+                                <div class="small fw-bold text-uppercase"><%= b.TrangThai === 'Trong' ? 'Trống' : 'Đang phục vụ' %></div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <!-- KHU B -->
+            <div class="tab-pane fade" id="khuB">
+                <div class="row g-4">
+                    <% tables.filter(t => t.KhuVuc === 'Khu B (Trong nhà)').forEach(function(b) { %>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <div class="card table-card <%= b.TrangThai === 'Trong' ? 'bg-success' : 'bg-danger' %>" 
+                                 onclick="openTableAction('<%= b.MaBan %>', '<%= b.TenBan %>', '<%= b.TrangThai %>', '<%= b.KhuVuc %>')">
+                                <i class="fas fa-chair table-icon"></i>
+                                <h5 class="fw-bold mb-1">Bàn <%= b.TenBan %></h5>
+                                <div class="small fw-bold text-uppercase"><%= b.TrangThai === 'Trong' ? 'Trống' : 'Đang phục vụ' %></div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <!-- KHU C -->
+            <div class="tab-pane fade" id="khuC">
+                <div class="row g-4">
+                    <% tables.filter(t => t.KhuVuc === 'Khu C (Tầng 2)').forEach(function(b) { %>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <div class="card table-card <%= b.TrangThai === 'Trong' ? 'bg-success' : 'bg-danger' %>" 
+                                 onclick="openTableAction('<%= b.MaBan %>', '<%= b.TenBan %>', '<%= b.TrangThai %>', '<%= b.KhuVuc %>')">
+                                <i class="fas fa-chair table-icon"></i>
+                                <h5 class="fw-bold mb-1">Bàn <%= b.TenBan %></h5>
+                                <div class="small fw-bold text-uppercase"><%= b.TrangThai === 'Trong' ? 'Trống' : 'Đang phục vụ' %></div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. MODAL THAO TÁC BÀN -->
+    <div class="modal fade" id="tableActionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-dark border-2">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">Thao tác: <span id="actionTableName" class="text-warning"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3 text-center">
+                    <div id="statusBadge" class="badge fs-6 mb-4 w-100 py-2"></div>
+                    <div class="d-grid gap-2">
+                        <a href="/pos" class="btn btn-success fw-bold p-3"><i class="fas fa-plus-circle me-2"></i> Gọi Món / Thanh Toán</a>
+                        
+                        <!-- Nút Sửa Tên / Khu Vực Bàn -->
+                        <button class="btn btn-info fw-bold text-white" onclick="openEditTableModal()"><i class="fas fa-edit me-2"></i> Sửa Thông Tin Bàn</button>
+                        
+                        <button class="btn btn-primary fw-bold" onclick="openTransferTableModal()"><i class="fas fa-exchange-alt me-2"></i> Chuyển Bàn</button>
+                        <button class="btn btn-warning fw-bold text-dark" onclick="openMergeTableModal()"><i class="fas fa-compress-arrows-alt me-2"></i> Gộp Bàn</button>  
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MODAL THÊM BÀN -->
+    <div class="modal fade" id="addTableModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content border-warning border-2">
+                <div class="modal-header bg-warning text-dark"><h5 class="modal-title fw-bold">Thêm Bàn Mới</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <form action="/tables/add" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Tên / Số bàn</label>
+                            <input type="text" class="form-control text-center fw-bold fs-5" name="tenBan" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-muted">Chọn Khu Vực</label>
+                            <select class="form-select fw-bold" name="khuVuc" required>
+                                <option value="Khu A (Ngoài trời)">Khu A (Ngoài trời)</option><option value="Khu B (Trong nhà)">Khu B (Trong nhà)</option><option value="Khu C (Tầng 2)">Khu C (Tầng 2)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100 fw-bold shadow-sm">TẠO BÀN</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MODAL SỬA BÀN -->
+    <div class="modal fade" id="editTableModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content border-info border-2">
+                <div class="modal-header bg-info text-white"><h5 class="modal-title fw-bold"><i class="fas fa-edit"></i> Sửa Bàn</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body p-4">
+                    <form action="/tables/edit" method="POST">
+                        <input type="hidden" id="editMaBan" name="maBan">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-muted">Tên / Số bàn mới</label>
+                            <input type="text" class="form-control text-center fw-bold fs-5" id="editTenBan" name="tenBan" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-muted">Chuyển Khu Vực</label>
+                            <select class="form-select fw-bold" id="editKhuVuc" name="khuVuc" required>
+                                <option value="Khu A (Ngoài trời)">Khu A (Ngoài trời)</option><option value="Khu B (Trong nhà)">Khu B (Trong nhà)</option><option value="Khu C (Tầng 2)">Khu C (Tầng 2)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-info text-white w-100 fw-bold shadow-sm">LƯU THAY ĐỔI</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 4. MODAL CHUYỂN BÀN -->
+ <div class="modal fade" id="transferTableModal" tabindex="-1">
+     <div class="modal-dialog modal-sm">
+         <div class="modal-content border-primary border-2">
+             <div class="modal-header bg-primary text-white">
+                 <h5 class="modal-title fw-bold"><i class="fas fa-exchange-alt"></i> Chuyển Bàn</h5>
+                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+             </div>
+             <div class="modal-body p-4">
+                 <form action="/tables/transfer" method="POST">
+                     <input type="hidden" id="transferMaBanCu" name="maBanCu">
+                     <div class="mb-3 text-center">
+                         <span class="text-muted">Từ bàn:</span>
+                         <h4 class="fw-bold text-primary" id="transferTenBanCu"></h4>
+                     </div>
+                     <div class="mb-4">
+                         <label class="form-label fw-bold small text-muted">Chuyển đến bàn (Trống):</label>
+                         <select class="form-select fw-bold" name="maBanMoi" required>
+                             <option value="">-- Chọn bàn trống --</option>
+                             <% tables.filter(t => t.TrangThai === 'Trong').forEach(function(b) { %>
+                                 <option value="<%= b.MaBan %>">Bàn <%= b.TenBan %> (<%= b.KhuVuc %>)</option>
+                             <% }); %>
+                         </select>
+                     </div>
+                     <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">XÁC NHẬN CHUYỂN</button>
+                 </form>
+             </div>
+         </div>
+     </div>
+ </div>
+ <!-- 5. MODAL GỘP BÀN -->
+ <div class="modal fade" id="mergeTableModal" tabindex="-1">
+     <div class="modal-dialog modal-sm">
+         <div class="modal-content border-warning border-2">
+             <div class="modal-header bg-warning text-dark">
+                 <h5 class="modal-title fw-bold"><i class="fas fa-compress-arrows-alt"></i> Gộp Bàn</h5>
+                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+             </div>
+             <div class="modal-body p-4">
+                 <form action="/tables/merge" method="POST">
+                     <input type="hidden" id="mergeMaBanCu" name="maBanCu">
+                     <div class="mb-3 text-center">
+                         <span class="text-muted">Gộp tất cả món của:</span>
+                         <h4 class="fw-bold text-warning" id="mergeTenBanCu"></h4>
+                     </div>
+                     <div class="mb-4">
+                         <label class="form-label fw-bold small text-muted">VÀO BÀN NÀY (Bàn Đích):</label>
+                         <select class="form-select fw-bold border-warning" name="maBanMoi" required>
+                             <option value="">-- Chọn bàn để gộp --</option>
+                             <% tables.forEach(function(b) { %>
+                                 <option value="<%= b.MaBan %>">Bàn <%= b.TenBan %> (<%= b.KhuVuc %>)</option>
+                             <% }); %>
+                         </select>
+                     </div>
+                     <button type="submit" class="btn btn-warning text-dark w-100 fw-bold shadow-sm">XÁC NHẬN GỘP</button>
+                 </form>
+             </div>
+         </div>
+     </div>
+ </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentTableData = {}; // Lưu dữ liệu bàn đang được click
+
+        function openTableAction(maBan, tenBan, trangThai, khuVuc) {
+            currentTableData = { maBan, tenBan, trangThai, khuVuc };
+            document.getElementById('actionTableName').innerText = 'Bàn ' + tenBan;
+            
+            let badge = document.getElementById('statusBadge');
+            if(trangThai === 'Trong') {
+                badge.className = 'badge bg-success fs-6 mb-4 w-100 py-2';
+                badge.innerText = 'Trạng thái: Trống';
+            } else {
+                badge.className = 'badge bg-danger fs-6 mb-4 w-100 py-2';
+                badge.innerText = 'Trạng thái: Đang có khách';
+            }
+            
+            var actionModal = new bootstrap.Modal(document.getElementById('tableActionModal'));
+            actionModal.show();
+        }
+
+        function openEditTableModal() {
+            // Tắt Modal thao tác đi
+            var actionModalEl = document.getElementById('tableActionModal');
+            var actionModal = bootstrap.Modal.getInstance(actionModalEl);
+            actionModal.hide();
+
+            // Đổ dữ liệu cũ vào form Sửa
+            document.getElementById('editMaBan').value = currentTableData.maBan;
+            document.getElementById('editTenBan').value = currentTableData.tenBan;
+            document.getElementById('editKhuVuc').value = currentTableData.khuVuc;
+
+            // Bật Modal Sửa lên
+            var editModal = new bootstrap.Modal(document.getElementById('editTableModal'));
+            editModal.show();
+        }
+        function openTransferTableModal() {
+         if(currentTableData.trangThai === 'Trong') {
+             alert("Bàn này đang trống, không có khách để chuyển!");
+             return;
+         }
+
+         // Tắt Modal thao tác
+         var actionModalEl = document.getElementById('tableActionModal');
+         var actionModal = bootstrap.Modal.getInstance(actionModalEl);
+         actionModal.hide();
+
+         // Đổ dữ liệu vào Modal chuyển bàn
+         document.getElementById('transferMaBanCu').value = currentTableData.maBan;
+         document.getElementById('transferTenBanCu').innerText = 'Bàn ' + currentTableData.tenBan;
+
+         // Bật Modal chuyển bàn
+         var transferModal = new bootstrap.Modal(document.getElementById('transferTableModal'));
+         transferModal.show();
+     }
+     function openMergeTableModal() {
+         if(currentTableData.trangThai === 'Trong') {
+             alert("Bàn này đang trống, không có dữ liệu để gộp!");
+             return;
+         }
+
+         // Tắt Modal thao tác
+         var actionModalEl = document.getElementById('tableActionModal');
+         var actionModal = bootstrap.Modal.getInstance(actionModalEl);
+         actionModal.hide();
+
+         // Đổ dữ liệu vào Modal gộp bàn
+         document.getElementById('mergeMaBanCu').value = currentTableData.maBan;
+         document.getElementById('mergeTenBanCu').innerText = 'Bàn ' + currentTableData.tenBan;
+
+         // Bật Modal gộp bàn
+         var mergeModal = new bootstrap.Modal(document.getElementById('mergeTableModal'));
+         mergeModal.show();
+     }
+    </script>
+</body>
+</html>

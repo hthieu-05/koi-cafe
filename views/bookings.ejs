@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8"><title>Đặt Bàn - Koi Cafe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f6f9; overflow-x: hidden; }
+        .sidebar { min-height: 100vh; width: 260px; background-color: #343a40; position: fixed;}
+        .sidebar-brand { height: 70px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #FFC107; font-weight: 800; border-bottom: 1px solid #4b545c; }
+        .nav-sidebar .nav-link { color: #c2c7d0; padding: 12px 20px; border-radius: 5px; margin: 5px 10px; font-weight: 500; }
+        .nav-sidebar .nav-link:hover, .nav-sidebar .nav-link.active { background-color: #FFC107; color: #212529; font-weight: bold; }
+        .nav-sidebar .nav-link i { width: 25px; text-align: center; margin-right: 8px; }
+        .main-content { margin-left: 260px; padding: 20px 30px; }
+        .topbar { background: white; height: 70px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 30px; }
+        .card-custom { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); overflow: hidden; background: white; }
+    </style>
+</head>
+<body>
+    <div class="sidebar shadow-lg">
+        <div class="sidebar-brand"><i class="fas fa-mug-hot me-2"></i> KOI CAFE</div>
+        <div class="mt-4 pb-3 mb-3 border-bottom border-secondary text-center"><div class="text-white fw-bold">👨‍💼 Quản trị viên</div></div>
+        <ul class="nav nav-sidebar flex-column">
+            <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Tổng Quan</a></li>
+            <li class="nav-item"><a class="nav-link text-white" href="/pos" style="background-color: #28a745;"><i class="fas fa-desktop"></i> POS Bán Hàng</a></li>
+            <li class="nav-item"><a class="nav-link" href="/orders"><i class="fas fa-motorcycle"></i> Đơn Giao Đi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Hóa Đơn</a></li>
+            <li class="nav-item"><a class="nav-link active" href="/bookings"><i class="fas fa-calendar-check"></i> Đặt Bàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/vouchers"><i class="fas fa-ticket-alt"></i> Khuyến Mãi</a></li>
+            <li class="nav-item"><a class="nav-link" href="/products"><i class="fas fa-coffee"></i> Sản Phẩm</a></li>
+            <!-- Bổ sung 2 dòng bị thiếu -->
+            <li class="nav-item"><a class="nav-link" href="/tables"><i class="fas fa-chair"></i> Sơ Đồ Bàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="/employees"><i class="fas fa-users"></i> Nhân Sự</a></li>
+        </ul>
+    </div>
+    <div class="main-content">
+        <div class="topbar"><h4 class="fw-bold text-dark m-0"><i class="fas fa-calendar-check text-success me-2"></i> YÊU CẦU ĐẶT BÀN</h4></div>
+        <div class="card-custom p-0">
+            <table class="table table-hover text-center align-middle mb-0">
+                <thead class="table-success text-dark">
+                    <tr><th>Mã</th><th>Khách Hàng</th><th>Giờ Đến</th><th>Số Người</th><th>Trạng Thái</th><th>Hành Động</th></tr>
+                </thead>
+                <tbody>
+                    <% bookings.forEach(function(b) { %>
+                        <tr>
+                            <td class="fw-bold">#<%= b.MaDatBan %></td>
+                            <td class="fw-bold"><%= b.TenKhachHang %><br><small><%= b.SoDienThoai %></small></td>
+                            <td class="fw-bold text-danger"><%= new Date('1970-01-01T' + b.GioDat).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) %><br><small class="text-dark"><%= new Date(b.NgayDat).toLocaleDateString('vi-VN') %></small></td>
+                            <td><%= b.SoNguoi %></td>
+                            <td><span class="badge bg-warning text-dark"><%= b.TrangThai %></span></td>
+                            <td>
+                                <% if(b.TrangThai === 'Chờ xác nhận') { %>
+                                    <form action="/bookings/update" method="POST" class="d-inline"><input type="hidden" name="maDatBan" value="<%= b.MaDatBan %>"><input type="hidden" name="trangThai" value="Đã xác nhận"><button type="submit" class="btn btn-sm btn-success">✔️ Nhận</button></form>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body></html>
