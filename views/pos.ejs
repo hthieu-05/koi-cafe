@@ -26,9 +26,9 @@
             <a class="btn btn-outline-light btn-sm fw-bold" href="/dashboard"><i class="fas fa-arrow-left"></i> Về Dashboard</a>
             <span class="navbar-text text-warning fw-bold mx-auto fs-5"><i class="fas fa-desktop"></i> KOI CAFE POS</span>
             <div class="text-white small d-flex align-items-center">
-    <span class="me-3"><i class="fas fa-user-circle"></i> Xin chào!</span>
-    <a href="/logout" class="btn btn-sm btn-danger fw-bold"><i class="fas fa-sign-out-alt"></i> Thoát</a>
-</div>
+                <span class="me-3"><i class="fas fa-user-circle"></i> Xin chào!</span>
+                <a href="/logout" class="btn btn-sm btn-danger fw-bold"><i class="fas fa-sign-out-alt"></i> Thoát</a>
+            </div>
         </div>
     </nav>
 
@@ -56,7 +56,7 @@
             <!-- CỘT 2: GIỎ HÀNG TẠM TÍNH -->
             <div class="col-md-5 col-lg-4 cart-container border-start">
                 <div class="p-3 bg-light border-bottom">
-                    <!-- MỚI: Thêm sự kiện onchange để tự động tải món ăn khi chọn bàn -->
+                    <!-- Tự động tải món ăn khi chọn bàn -->
                     <select id="maBan" class="form-select form-select-lg fw-bold shadow-sm" onchange="loadTableOrder()">
                         <option value="">-- CHỌN BÀN GỌI MÓN --</option>
                         <% tables.forEach(function(b) { %>
@@ -71,13 +71,26 @@
                     <div class="text-center text-muted mt-5"><i class="fas fa-receipt fs-1 mb-3"></i><br>Chưa có món nào</div>
                 </div>
 
+                <!-- KHU VỰC NHẬP THÔNG TIN TÍCH ĐIỂM -->
+                <div class="p-3 bg-white border-top">
+                    <h6 class="fw-bold text-success mb-2"><i class="fas fa-gift"></i> Khách hàng thành viên</h6>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" id="khachPhone" class="form-control fw-bold" placeholder="Nhập SĐT để tích điểm..." onblur="checkCustomer()">
+                        <button class="btn btn-outline-success fw-bold" type="button" onclick="checkCustomer()">Kiểm tra</button>
+                    </div>
+                    <!-- Chỗ để hiện Tên và Số điểm -->
+                    <div id="khachInfo" class="small text-primary fw-bold mb-2"></div>
+                    <!-- Ô nhập tên (Chỉ hiện khi là khách mới) -->
+                    <input type="text" id="khachName" class="form-control form-control-sm mb-2" placeholder="Tên khách hàng mới (Bắt buộc)" style="display: none;">
+                </div>
+
                 <div class="p-3 bg-light border-top shadow-lg">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <span class="fs-5 fw-bold text-dark">TỔNG CỘNG:</span>
                         <span class="fs-2 fw-bold text-danger" id="cartTotal">0 đ</span>
                     </div>
                     
-                    <!-- MỚI: Tách thành 2 nút LƯU TẠM và THANH TOÁN -->
+                    <!-- Nút LƯU TẠM và THANH TOÁN -->
                     <div class="row g-2">
                         <div class="col-6">
                             <button class="btn btn-warning btn-lg w-100 fw-bold py-3 shadow-sm text-dark" onclick="processOrder('save')">
@@ -97,13 +110,14 @@
 
     <script>
         let cart = [];
+        let currentSubtotal = 0; // Biến lưu tổng tiền để tính toán điểm
 
         // 1. Tải món ăn cũ của bàn (nếu có)
         function loadTableOrder() {
             const selectEl = document.getElementById('maBan');
             const maBan = selectEl.value;
             
-            // Đổi màu khung chọn bàn cho sinh động
+            // Đổi màu khung chọn bàn
             const selectedOption = selectEl.options[selectEl.selectedIndex];
             if(selectedOption.getAttribute('data-status') === 'Đang phục vụ') {
                 selectEl.className = "form-select form-select-lg fw-bold shadow-sm table-select-danger";
@@ -115,14 +129,14 @@
                 cart = []; renderCart(); return;
             }
 
-            // Gọi API lấy dữ liệu món ăn
+            // Gọi API lấy dữ liệu
             fetch(`/api/table-order/${maBan}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.cart.length > 0) {
                         cart = data.cart;
                     } else {
-                        cart = []; // Bàn trống
+                        cart = [];
                     }
                     renderCart();
                 });
@@ -165,22 +179,61 @@
                 });
             }
             document.getElementById('cartItems').innerHTML = html;
+            
+            // Cập nhật biến tổng tiền để dùng tính điểm
+            currentSubtotal = total; 
             document.getElementById('cartTotal').innerText = total.toLocaleString('vi-VN') + ' đ';
+            
+            // Nếu có SĐT nhập sẵn, gọi hàm kiểm tra lại để cập nhật hiển thị điểm dự kiến cộng
+            if(document.getElementById('khachPhone').value.trim()) {
+                checkCustomer();
+            }
         }
 
-        // 5. Xử lý Gửi lệnh Xuống Bếp (Lưu) hoặc Thanh toán
+        // 5. Kiểm tra khách hàng thành viên
+        function checkCustomer() {
+            const phone = document.getElementById('khachPhone').value.trim();
+            const infoBox = document.getElementById('khachInfo');
+            const nameBox = document.getElementById('khachName');
+            
+            if(!phone) { infoBox.innerText = ''; nameBox.style.display = 'none'; return; }
+
+            fetch('/api/customer/' + phone)
+                .then(res => res.json())
+                .then(result => {
+                    if(result.success) {
+                        infoBox.innerHTML = `👋 Chào <b>${result.data.TenKH}</b> - Hiện có: <span class="badge bg-warning text-dark">${result.data.DiemTichLuy} điểm</span>`;
+                        nameBox.style.display = 'none';
+                        nameBox.value = result.data.TenKH;
+                    } else {
+                        infoBox.innerHTML = `✨ Khách hàng mới! Sẽ được cộng <b>${Math.floor(currentSubtotal / 10000)} điểm</b>.`;
+                        nameBox.style.display = 'block';
+                        nameBox.value = '';
+                    }
+                });
+        }
+
+        // 6. Xử lý Gửi lệnh (Lưu hoặc Thanh toán)
         function processOrder(action) {
             if(cart.length === 0) return alert('Hóa đơn chưa có món nào!');
             let maBan = document.getElementById('maBan').value;
             if(!maBan) return alert('Vui lòng chọn Bàn trước!');
             
+            // Lấy thông tin Tích điểm
+            let sdtKhach = document.getElementById('khachPhone').value.trim();
+            let tenKhach = document.getElementById('khachName').value.trim();
+
+            if (action === 'pay' && sdtKhach && !tenKhach && document.getElementById('khachName').style.display === 'block') {
+                return alert('Vui lòng nhập Tên cho khách hàng mới để tạo thẻ thành viên!');
+            }
+
             // Hỏi xác nhận nếu ấn Thanh toán
             if(action === 'pay' && !confirm('Xác nhận thu tiền và In bill cho bàn này?')) return;
 
             fetch('/pos/process', {
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ maBan, cart, action })
+                body: JSON.stringify({ maBan, cart, action, sdtKhach, tenKhach })
             }).then(r => r.json()).then(res => {
                 if(res.success) { 
                     alert(res.message); 

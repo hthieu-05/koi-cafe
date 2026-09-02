@@ -542,10 +542,11 @@ app.get('/pos', async (req, res) => {
     } catch (err) { res.send('Lỗi!'); }
 });
 // ==========================================
+// ==========================================
 //        8. NGHIỆP VỤ POS CHUYÊN SÂU
 // ==========================================
 
-// 1. Kéo dữ liệu món ăn đang dùng dở của Bàn ra màn hình POS
+// 1. Kéo dữ liệu món ăn đang dùng dở của Bàn ra màn hình POS (Giữ nguyên đoạn này nếu bạn đang có)
 app.get('/api/table-order/:maBan', async (req, res) => {
     try {
         const pool = await poolPromise;
@@ -562,15 +563,29 @@ app.get('/api/table-order/:maBan', async (req, res) => {
             `);
             res.json({ success: true, cart: chiTiet.recordset });
         } else {
-            res.json({ success: true, cart: [] }); // Bàn chưa gọi món nào
+            res.json({ success: true, cart: [] }); 
         }
     } catch (err) { res.json({ success: false }); }
 });
 
-// 2. Xử lý LƯU ORDER hoặc THANH TOÁN
+// [MỚI] 2. API Quét Số điện thoại khách hàng
+app.get('/api/customer/:phone', async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const check = await pool.request().input('SDT', req.params.phone)
+            .query('SELECT * FROM KhachHang WHERE SoDienThoai = @SDT');
+        if (check.recordset.length > 0) {
+            res.json({ success: true, data: check.recordset[0] });
+        } else {
+            res.json({ success: false }); // Không tìm thấy -> Khách mới
+        }
+    } catch (err) { res.json({ success: false }); }
+});
+
+// [NÂNG CẤP] 3. Xử lý LƯU ORDER hoặc THANH TOÁN (CÓ TÍCH ĐIỂM)
 app.post('/pos/process', async (req, res) => {
-    const { maBan, cart, action } = req.body; 
-    // action = 'save' (Lưu tạm) || 'pay' (Thanh toán xong)
+    // Lấy thêm thông tin SĐT và Tên khách từ giao diện
+    const { maBan, cart, action, sdtKhach, tenKhach } = req.body; 
     
     try {
         const pool = await poolPromise;
@@ -578,21 +593,45 @@ app.post('/pos/process', async (req, res) => {
         const trangThaiHD = (action === 'pay') ? 'Đã thanh toán' : 'Chưa thanh toán';
         const trangThaiBan = (action === 'pay') ? 'Trong' : 'Đang phục vụ';
 
-        // 1. Kiểm tra xem bàn đã có Hóa đơn tạm tính chưa
+        let maKH_db = null; // Biến lưu Mã Khách Hàng
+
+        // ---> NGHIỆP VỤ TÍCH ĐIỂM (Chỉ tính khi Thanh toán và Thu ngân có nhập SĐT) <---
+        if (action === 'pay' && sdtKhach) {
+            const diemCong = Math.floor(tongTien / 10000); // 10k = 1 điểm
+            
+            const checkKhach = await pool.request().input('SDT', sdtKhach).query("SELECT MaKH FROM KhachHang WHERE SoDienThoai = @SDT");
+            
+            if (checkKhach.recordset.length > 0) {
+                // Khách Cũ: Lấy mã KH và Cộng điểm
+                maKH_db = checkKhach.recordset[0].MaKH;
+                await pool.request().input('MaKH', maKH_db).input('Diem', diemCong)
+                    .query("UPDATE KhachHang SET DiemTichLuy = DiemTichLuy + @Diem WHERE MaKH = @MaKH");
+            } else {
+                // Khách Mới: Lưu thông tin và cộng điểm đầu tiên
+                const insertKhach = await pool.request()
+                    .input('TenKH', tenKhach || 'Khách vãng lai').input('SDT', sdtKhach).input('Diem', diemCong)
+                    .query("INSERT INTO KhachHang (TenKH, SoDienThoai, DiemTichLuy) OUTPUT INSERTED.MaKH VALUES (@TenKH, @SDT, @Diem)");
+                maKH_db = insertKhach.recordset[0].MaKH;
+            }
+        }
+
+        // 1. Lưu Hóa đơn
         const checkHD = await pool.request().input('MaBan', maBan).query("SELECT MaHD FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
-        
         let maHD = 0;
+        
         if (checkHD.recordset.length > 0) {
             maHD = checkHD.recordset[0].MaHD;
-            // Cập nhật tổng tiền và trạng thái cho Bill cũ
-            await pool.request().input('MaHD', maHD).input('TongTien', tongTien).input('TrangThai', trangThaiHD)
-                .query("UPDATE HoaDon SET TongTien = @TongTien, TrangThai = @TrangThai WHERE MaHD = @MaHD");
-            // Xóa hết chi tiết món ăn cũ để chèn lại danh sách mới (Tránh lỗi trùng lặp khi khách gọi thêm)
+            // Nếu có mã KH thì update gắn vào Hóa đơn
+            let updateQuery = "UPDATE HoaDon SET TongTien = @TongTien, TrangThai = @TrangThai WHERE MaHD = @MaHD";
+            if (maKH_db) updateQuery = "UPDATE HoaDon SET TongTien = @TongTien, TrangThai = @TrangThai, MaKH = @MaKH WHERE MaHD = @MaHD";
+            
+            await pool.request().input('MaHD', maHD).input('TongTien', tongTien).input('TrangThai', trangThaiHD).input('MaKH', maKH_db).query(updateQuery);
+            // Xóa chi tiết cũ để chèn lại
             await pool.request().input('MaHD', maHD).query("DELETE FROM ChiTietHoaDon WHERE MaHD = @MaHD");
         } else {
-            // Nếu bàn Trống, tạo ngay Bill mới
-            const insertHD = await pool.request().input('MaBan', maBan).input('TongTien', tongTien).input('TrangThai', trangThaiHD)
-                .query("INSERT INTO HoaDon (MaBan, MaNV, NgayLap, TongTien, TrangThai) OUTPUT INSERTED.MaHD VALUES (@MaBan, 1, GETDATE(), @TongTien, @TrangThai)");
+            // Tạo Hóa đơn mới
+            const insertHD = await pool.request().input('MaBan', maBan).input('TongTien', tongTien).input('TrangThai', trangThaiHD).input('MaKH', maKH_db)
+                .query("INSERT INTO HoaDon (MaBan, MaNV, NgayLap, TongTien, TrangThai, MaKH) OUTPUT INSERTED.MaHD VALUES (@MaBan, 1, GETDATE(), @TongTien, @TrangThai, @MaKH)");
             maHD = insertHD.recordset[0].MaHD;
         }
 
@@ -601,12 +640,16 @@ app.post('/pos/process', async (req, res) => {
             await pool.request().input('MaHD', maHD).input('MaSP', item.maSP).input('SoLuong', item.soLuong).input('DonGia', item.donGia)
                 .query("INSERT INTO ChiTietHoaDon (MaHD, MaSP, SoLuong, DonGia) VALUES (@MaHD, @MaSP, @SoLuong, @DonGia)");
         }
-
+        
         // 3. Cập nhật trạng thái Bàn
         await pool.request().input('MaBan', maBan).input('TrangThai', trangThaiBan)
             .query("UPDATE Ban SET TrangThai = @TrangThai WHERE MaBan = @MaBan");
 
-        res.json({ success: true, message: action === 'save' ? '✅ Đã lưu order xuống bếp!' : '✅ Thanh toán thành công!' });
+        // Tạo câu thông báo trả về
+        let msg = action === 'save' ? '✅ Đã lưu order xuống bếp!' : '✅ Thanh toán thành công!';
+        if (action === 'pay' && sdtKhach) msg += ` (Đã cộng ${Math.floor(tongTien / 10000)} điểm vào ví)`;
+        
+        res.json({ success: true, message: msg });
     } catch (err) {
         console.error(err); res.json({ success: false, message: 'Lỗi máy chủ POS!' });
     }
