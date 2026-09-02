@@ -907,6 +907,49 @@ app.post('/api/book-table', async (req, res) => {
         res.json({ success: false, message: 'Lỗi hệ thống, vui lòng thử lại sau!' });
     }
 });
+// ==========================================
+// QUẢN LÝ ĐƠN ONLINE (CẬP NHẬT & TÍCH ĐIỂM)
+// ==========================================
+app.post('/orders/update-status', async (req, res) => {
+    // Nhận dữ liệu từ nút bấm trên giao diện
+    const { maDon, sdt, tongTien, trangThaiMoi, tenKhach } = req.body;
+    
+    try {
+        const pool = await poolPromise;
+        
+        // 1. Cập nhật trạng thái đơn hàng
+        await pool.request()
+            .input('MaDon', maDon)
+            .input('TrangThai', trangThaiMoi)
+            .query("UPDATE HoaDon SET TrangThai = @TrangThai WHERE MaHD = @MaDon");
+
+        // 2. NGHIỆP VỤ TÍCH ĐIỂM: Chỉ chạy khi đơn đã "Hoàn thành" và có SĐT
+        if (trangThaiMoi === 'Hoàn thành' && sdt) {
+            const diemCong = Math.floor(tongTien / 10000); // 10.000đ = 1 điểm
+            
+            // Kiểm tra xem SĐT này đã có thẻ thành viên chưa
+            const checkKhach = await pool.request().input('SDT', sdt).query("SELECT MaKH FROM KhachHang WHERE SoDienThoai = @SDT");
+            
+            if (checkKhach.recordset.length > 0) {
+                // Khách cũ -> Cộng dồn điểm
+                await pool.request().input('SDT', sdt).input('Diem', diemCong)
+                    .query("UPDATE KhachHang SET DiemTichLuy = DiemTichLuy + @Diem WHERE SoDienThoai = @SDT");
+            } else {
+                // Khách mới -> Tạo thẻ thành viên mới cho khách Online
+                await pool.request()
+                    .input('TenKH', tenKhach || 'Khách Online')
+                    .input('SDT', sdt)
+                    .input('Diem', diemCong)
+                    .query("INSERT INTO KhachHang (TenKH, SoDienThoai, DiemTichLuy) VALUES (@TenKH, @SDT, @Diem)");
+            }
+        }
+
+        res.json({ success: true, message: 'Đã cập nhật trạng thái đơn hàng!' });
+    } catch (err) {
+        console.error('Lỗi cập nhật đơn:', err);
+        res.json({ success: false, message: 'Lỗi máy chủ!' });
+    }
+});
 // Chạy server
 app.listen(port, () => {
     console.log(`Server đang chạy tại http://localhost:${port}`);
