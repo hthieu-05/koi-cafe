@@ -883,6 +883,30 @@ app.post('/categories/delete', async (req, res) => {
         res.send('<script>alert("❌ Lỗi: Không thể xóa Danh mục đang có món ăn bên trong! Hãy xóa hoặc chuyển danh mục các món ăn trước."); window.location.href="/products";</script>'); 
     }
 });
+// ==========================================
+// API KHÁCH HÀNG ĐẶT BÀN ONLINE
+// ==========================================
+app.post('/api/book-table', async (req, res) => {
+    const { tenKhach, sdt, ngayDat, gioDat, soNguoi, ghiChu } = req.body;
+    try {
+        const pool = await poolPromise;
+        await pool.request()
+            .input('TenKhach', tenKhach)
+            .input('SDT', sdt)
+            .input('NgayDat', ngayDat)
+            .input('GioDat', gioDat)
+            .input('SoNguoi', soNguoi)
+            .input('GhiChu', ghiChu || '')
+            .query(`
+                INSERT INTO DatBan (TenKhach, SoDienThoai, NgayDat, GioDat, SoNguoi, GhiChu, TrangThai)
+                VALUES (@TenKhach, @SDT, @NgayDat, @GioDat, @SoNguoi, @GhiChu, N'Chờ xác nhận')
+            `);
+        res.json({ success: true, message: '🎉 Đặt bàn thành công! Quán sẽ sớm liên hệ để xác nhận.' });
+    } catch (err) {
+        console.error('Lỗi đặt bàn:', err);
+        res.json({ success: false, message: 'Lỗi hệ thống, vui lòng thử lại sau!' });
+    }
+});
 // Chạy server
 app.listen(port, () => {
     console.log(`Server đang chạy tại http://localhost:${port}`);

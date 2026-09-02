@@ -57,7 +57,7 @@
                 </ul>
                 <div class="d-flex align-items-center">
                     <a href="/login" class="btn btn-outline-warning rounded-pill px-4 fw-bold me-3"><i class="fas fa-user-circle"></i> Nội Bộ</a>
-                    <button class="btn btn-warning rounded-pill px-4 fw-bold" onclick="alert('Tính năng đặt bàn khách hàng đang phát triển')">Đặt Bàn</button>
+                    <button class="btn btn-warning rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#bookingModal">Đặt Bàn</button>
                 </div>
             </div>
         </div>
@@ -145,5 +145,85 @@
     </section>
 
     <footer class="footer text-center"><div class="container"><h4 class="text-warning fw-bold mb-2"><i class="fas fa-mug-hot"></i> KOI CAFE</h4><p class="text-white-50">© 2026 Bản quyền thuộc về Koi Cafe</p></div></footer>
+    <!-- MODAL ĐẶT BÀN TRƯỚC -->
+    <div class="modal fade" id="bookingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-warning border-2">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-calendar-check"></i> Đặt Bàn Giữ Chỗ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-start">
+                    <form id="bookingForm">
+                        <div class="mb-3">
+                            <label class="fw-bold small text-muted">Họ và Tên (*)</label>
+                            <input type="text" class="form-control fw-bold" id="bookName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold small text-muted">Số điện thoại (*)</label>
+                            <input type="tel" class="form-control fw-bold" id="bookPhone" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="fw-bold small text-muted">Ngày đến (*)</label>
+                                <input type="date" class="form-control fw-bold" id="bookDate" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="fw-bold small text-muted">Giờ đến (*)</label>
+                                <input type="time" class="form-control fw-bold" id="bookTime" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold small text-muted">Số người (*)</label>
+                            <input type="number" class="form-control fw-bold" id="bookGuests" min="1" value="2" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="fw-bold small text-muted">Ghi chú (Tùy chọn)</label>
+                            <textarea class="form-control" id="bookNote" rows="2" placeholder="Ví dụ: Cần ghế trẻ em, thích ngồi cạnh cửa sổ..."></textarea>
+                        </div>
+                        <button type="button" class="btn btn-warning w-100 fw-bold py-2 shadow-sm" onclick="submitBooking()">GỬI YÊU CẦU</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Script (nếu chưa có) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Set giới hạn ngày đặt bàn tối thiểu là hôm nay
+        document.getElementById('bookDate').min = new Date().toISOString().split("T")[0];
+
+        function submitBooking() {
+            const data = {
+                tenKhach: document.getElementById('bookName').value.trim(),
+                sdt: document.getElementById('bookPhone').value.trim(),
+                ngayDat: document.getElementById('bookDate').value,
+                gioDat: document.getElementById('bookTime').value,
+                soNguoi: document.getElementById('bookGuests').value,
+                ghiChu: document.getElementById('bookNote').value.trim()
+            };
+
+            if(!data.tenKhach || !data.sdt || !data.ngayDat || !data.gioDat || !data.soNguoi) {
+                return alert("Vui lòng nhập đầy đủ thông tin bắt buộc (*)");
+            }
+
+            fetch('/api/book-table', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(res => res.json()).then(result => {
+                if(result.success) {
+                    alert(result.message);
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('bookingModal'));
+                    modal.hide();
+                    document.getElementById('bookingForm').reset();
+                } else {
+                    alert(result.message);
+                }
+            });
+        }
+    </script>
 </body>
 </html>
