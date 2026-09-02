@@ -15,7 +15,6 @@
         .main-content { margin-left: 260px; padding: 20px 30px; }
         .topbar { background: white; height: 70px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 30px; }
         
-        /* Chỉnh style cho Tab */
         .nav-pills .nav-link { font-weight: bold; color: #495057; border-radius: 50px; padding: 10px 25px; margin-right: 10px; background: white; border: 1px solid #dee2e6; }
         .nav-pills .nav-link.active { color: white !important; }
         .nav-pills .nav-link[href="#tab-cho"].active { background-color: #dc3545; border-color: #dc3545; }
@@ -30,7 +29,6 @@
         <div class="sidebar-brand"><i class="fas fa-mug-hot me-2"></i> KOI CAFE</div>
         <div class="mt-4 pb-3 mb-3 border-bottom border-secondary text-center"><div class="text-white fw-bold">👨‍💼 Quản trị viên</div></div>
         <ul class="nav nav-sidebar flex-column">
-            <ul class="nav nav-sidebar flex-column">
             <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Tổng Quan</a></li>
             <li class="nav-item"><a class="nav-link" href="/pos"><i class="fas fa-desktop"></i> POS Bán Hàng</a></li>
             <li class="nav-item"><a class="nav-link active" href="/orders"><i class="fas fa-motorcycle"></i> Đơn Giao Đi</a></li>
@@ -40,12 +38,7 @@
             <li class="nav-item"><a class="nav-link" href="/products"><i class="fas fa-coffee"></i> Sản Phẩm</a></li>
             <li class="nav-item"><a class="nav-link" href="/tables"><i class="fas fa-chair"></i> Sơ Đồ Bàn</a></li>
             <li class="nav-item"><a class="nav-link" href="/employees"><i class="fas fa-users"></i> Nhân Sự</a></li>
-            
-            <!-- Nút Đăng Xuất -->
-            <li class="nav-item mt-4 pt-3 border-top border-secondary">
-                <a class="nav-link text-danger fw-bold" href="/logout"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
-            </li>
-        </ul>
+            <li class="nav-item mt-4 pt-3 border-top border-secondary"><a class="nav-link text-danger fw-bold" href="/logout"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a></li>
         </ul>
     </div>
     
@@ -55,7 +48,6 @@
             <button class="btn btn-outline-danger fw-bold" onclick="location.reload()"><i class="fas fa-sync-alt"></i> Làm Mới</button>
         </div>
 
-        <!-- 3 TAB ĐIỀU HƯỚNG -->
         <ul class="nav nav-pills mb-4" id="orderTabs">
             <li class="nav-item"><a class="nav-link active" data-bs-toggle="pill" href="#tab-cho">🔴 Cần Xử Lý (Mới)</a></li>
             <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab-giao">🔵 Đang Giao Hàng</a></li>
@@ -65,7 +57,7 @@
         <div class="table-card">
             <div class="tab-content">
                 
-                <!-- TAB 1: CHỜ XÁC NHẬN / ĐANG CHUẨN BỊ -->
+                <!-- TAB 1: CHỜ XÁC NHẬN -->
                 <div class="tab-pane fade show active" id="tab-cho">
                     <table class="table table-hover align-middle text-center">
                         <thead class="table-danger"><tr><th>Mã Đơn</th><th>Khách Hàng</th><th>Địa Chỉ</th><th>Tổng Tiền</th><th>Trạng Thái</th><th>Hành Động</th></tr></thead>
@@ -78,10 +70,11 @@
                                     <td class="fw-bold text-primary"><%= don.TongTien.toLocaleString('vi-VN') %> đ</td>
                                     <td><span class="badge bg-warning text-dark"><%= don.TrangThai %></span></td>
                                     <td>
-                                        <div class="d-flex justify-content-center gap-2">
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewOrderDetails('<%= don.MaHD %>', '<%= don.TenKhach %>')"><i class="fas fa-eye"></i></button>
                                             <% if(don.TrangThai === 'Chờ xác nhận') { %>
                                                 <button class="btn btn-sm btn-success fw-bold" onclick="changeStatus('<%= don.MaHD %>', '<%= don.SDT %>', <%= don.TongTien %>, 'Đang chuẩn bị', '<%= don.TenKhach %>')"><i class="fas fa-check"></i> Bếp Làm</button>
-                                                <button class="btn btn-sm btn-outline-danger fw-bold" onclick="changeStatus('<%= don.MaHD %>', '<%= don.SDT %>', <%= don.TongTien %>, 'Đã hủy', '<%= don.TenKhach %>')">Hủy</button>
+                                                <button class="btn btn-sm btn-outline-danger fw-bold" onclick="changeStatus('<%= don.MaHD %>', '<%= don.SDT %>', <%= don.TongTien %>, 'Đã hủy', '<%= don.TenKhach %>')"><i class="fas fa-times"></i></button>
                                             <% } else { %>
                                                 <button class="btn btn-sm btn-info text-white fw-bold" onclick="changeStatus('<%= don.MaHD %>', '<%= don.SDT %>', <%= don.TongTien %>, 'Đang giao', '<%= don.TenKhach %>')"><i class="fas fa-motorcycle"></i> Giao Hàng</button>
                                             <% } %>
@@ -106,10 +99,10 @@
                                     <td class="fw-bold text-primary"><%= don.TongTien.toLocaleString('vi-VN') %> đ</td>
                                     <td><span class="badge bg-info"><%= don.TrangThai %></span></td>
                                     <td>
-                                        <!-- Nút Hoàn thành sẽ kích hoạt Tích điểm -->
-                                        <button class="btn btn-sm btn-success fw-bold w-100" onclick="changeStatus('<%= don.MaHD %>', '<%= don.SDT %>', <%= don.TongTien %>, 'Hoàn thành', '<%= don.TenKhach %>')">
-                                            <i class="fas fa-flag-checkered"></i> Giao Xong (Chốt)
-                                        </button>
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewOrderDetails('<%= don.MaHD %>', '<%= don.TenKhach %>')"><i class="fas fa-eye"></i> Xem</button>
+                                            <button class="btn btn-sm btn-success fw-bold" onclick="changeStatus('<%= don.MaHD %>', '<%= don.SDT %>', <%= don.TongTien %>, 'Hoàn thành', '<%= don.TenKhach %>')"><i class="fas fa-flag-checkered"></i> Giao Xong</button>
+                                        </div>
                                     </td>
                                 </tr>
                             <% }); %>
@@ -117,10 +110,10 @@
                     </table>
                 </div>
 
-                <!-- TAB 3: LỊCH SỬ (HOÀN THÀNH / ĐÃ HỦY) -->
+                <!-- TAB 3: LỊCH SỬ -->
                 <div class="tab-pane fade" id="tab-xong">
                     <table class="table table-hover align-middle text-center">
-                        <thead class="table-success"><tr><th>Mã Đơn</th><th>Khách Hàng</th><th>Địa Chỉ</th><th>Tổng Tiền</th><th>Trạng Thái</th></tr></thead>
+                        <thead class="table-success"><tr><th>Mã Đơn</th><th>Khách Hàng</th><th>Địa Chỉ</th><th>Tổng Tiền</th><th>Trạng Thái</th><th>Chi Tiết</th></tr></thead>
                         <tbody>
                             <% orders.filter(o => o.TrangThai === 'Hoàn thành' || o.TrangThai === 'Đã hủy').forEach(function(don) { %>
                                 <tr>
@@ -132,6 +125,9 @@
                                         <% if(don.TrangThai === 'Hoàn thành') { %> <span class="badge bg-success">Hoàn thành</span> 
                                         <% } else { %> <span class="badge bg-secondary">Đã hủy</span> <% } %>
                                     </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary fw-bold" onclick="viewOrderDetails('<%= don.MaHD %>', '<%= don.TenKhach %>')"><i class="fas fa-eye"></i></button>
+                                    </td>
                                 </tr>
                             <% }); %>
                         </tbody>
@@ -142,27 +138,75 @@
         </div>
     </div>
 
+    <!-- MODAL CHI TIẾT MÓN ĂN -->
+    <div class="modal fade" id="orderDetailModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-primary border-2">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-receipt"></i> Chi Tiết Đơn: <span id="detailMaDon"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="p-3 bg-light border-bottom">
+                        <h6 class="fw-bold mb-0 text-dark">Khách hàng: <span id="detailTenKhach" class="text-primary"></span></h6>
+                    </div>
+                    <ul class="list-group list-group-flush" id="detailItemsList">
+                        <!-- Danh sách món ăn sẽ được load vào đây -->
+                    </ul>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Hàm chuyển trạng thái
         function changeStatus(maDon, sdt, tongTien, trangThaiMoi, tenKhach) {
             let msg = `Xác nhận chuyển trạng thái đơn hàng thành: ${trangThaiMoi}?`;
-            if (trangThaiMoi === 'Hoàn thành') {
-                msg += `\nHệ thống sẽ tự động cộng ${Math.floor(tongTien/10000)} điểm CRM cho Khách hàng này!`;
-            }
+            if (trangThaiMoi === 'Hoàn thành') msg += `\nHệ thống sẽ tự động cộng ${Math.floor(tongTien/10000)} điểm CRM!`;
 
             if(confirm(msg)) {
                 fetch('/orders/update-status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ maDon, sdt, tongTien, trangThaiMoi, tenKhach })
                 }).then(res => res.json()).then(data => {
-                    if(data.success) {
-                        location.reload(); // Tải lại trang để thấy đơn nhảy sang Tab khác
-                    } else {
-                        alert(data.message);
-                    }
+                    if(data.success) location.reload(); else alert(data.message);
                 });
             }
+        }
+
+        // Hàm xem chi tiết món ăn
+        function viewOrderDetails(maDon, tenKhach) {
+            document.getElementById('detailMaDon').innerText = '#ONL-' + maDon;
+            document.getElementById('detailTenKhach').innerText = tenKhach;
+            document.getElementById('detailItemsList').innerHTML = '<li class="list-group-item text-center">Đang tải dữ liệu...</li>';
+
+            var myModal = new bootstrap.Modal(document.getElementById('orderDetailModal'));
+            myModal.show();
+
+            fetch('/api/order-details/' + maDon)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success && data.items.length > 0) {
+                        let html = '';
+                        data.items.forEach(item => {
+                            html += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                <div>
+                                    <div class="fw-bold text-dark">${item.TenSP}</div>
+                                    <div class="small text-muted">${item.DonGia.toLocaleString('vi-VN')} đ x ${item.SoLuong}</div>
+                                </div>
+                                <span class="badge bg-primary rounded-pill fs-6">${(item.DonGia * item.SoLuong).toLocaleString('vi-VN')} đ</span>
+                            </li>`;
+                        });
+                        document.getElementById('detailItemsList').innerHTML = html;
+                    } else {
+                        document.getElementById('detailItemsList').innerHTML = '<li class="list-group-item text-center text-danger fw-bold">Không tìm thấy chi tiết món!</li>';
+                    }
+                });
         }
     </script>
 </body>

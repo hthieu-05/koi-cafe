@@ -949,6 +949,24 @@ app.post('/orders/update-status', async (req, res) => {
         console.error('Lỗi cập nhật đơn:', err);
         res.json({ success: false, message: 'Lỗi máy chủ!' });
     }
+    // Lấy chi tiết các món ăn trong 1 Đơn hàng
+app.get('/api/order-details/:maDon', async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('MaHD', req.params.maDon)
+            .query(`
+                SELECT sp.TenSP, ct.SoLuong, ct.DonGia
+                FROM ChiTietHoaDon ct
+                JOIN SanPham sp ON ct.MaSP = sp.MaSP
+                WHERE ct.MaHD = @MaHD
+            `);
+        res.json({ success: true, items: result.recordset });
+    } catch (err) {
+        console.error('Lỗi lấy chi tiết đơn:', err);
+        res.json({ success: false });
+    }
+});
 });
 // Chạy server
 app.listen(port, () => {
