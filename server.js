@@ -90,17 +90,15 @@ app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/login');
 });
+
 // ==========================================
-// ==========================================
-//        // ==========================================
-//        1. GIAO DIỆN KHÁCH HÀNG (MỚI)
+//        1. GIAO DIỆN KHÁCH HÀNG
 // ==========================================
 
 // 1.1 Trang chủ (Hiển thị Top 4 Bán Chạy, Giới thiệu)
 app.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
-        // Lấy Top 4 món bán chạy nhất dựa trên tổng số lượng trong ChiTietHoaDon
         const topProducts = await pool.request().query(`
             SELECT TOP 4 sp.MaSP, sp.TenSP, sp.DonGia, sp.HinhAnh, dm.TenDM,
                    ISNULL(SUM(ct.SoLuong), 0) as TongBan
@@ -137,29 +135,6 @@ app.get('/menu', async (req, res) => {
 });
 
 // ==========================================
-//        2. ĐĂNG NHẬP
-// ==========================================
-app.get('/login', (req, res) => { res.render('login'); });
-app.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('TenDangNhap', username)
-            .input('MatKhau', password)
-            .query('SELECT * FROM TaiKhoan WHERE TenDangNhap = @TenDangNhap AND MatKhau = @MatKhau');
-
-        if (result.recordset.length > 0) {
-            const user = result.recordset[0];
-            res.redirect(`/dashboard?role=${user.VaiTro}&username=${user.TenDangNhap}`);
-        } else {
-            res.render('login', { error: 'Tên đăng nhập hoặc mật khẩu không chính xác!' });
-        }
-    } catch (err) { res.render('login', { error: 'Lỗi kết nối hệ thống.' }); }
-});
-
-// ==========================================
-//       // ==========================================
 //        3. DASHBOARD (THỐNG KÊ KINH DOANH)
 // ==========================================
 app.get('/dashboard', async (req, res) => {
@@ -168,14 +143,11 @@ app.get('/dashboard', async (req, res) => {
 
     try {
         const pool = await poolPromise;
-        
-        // 1. Thống kê số liệu tổng quan (Cũ)
         const doanhThuResult = await pool.request().query(`SELECT ISNULL(SUM(TongTien), 0) AS TongDoanhThu FROM HoaDon WHERE TrangThai = N'Đã thanh toán'`);
         const soDonResult = await pool.request().query(`SELECT COUNT(MaHD) AS SoDon FROM HoaDon WHERE TrangThai = N'Đã thanh toán'`);
         const banTrongResult = await pool.request().query(`SELECT COUNT(MaBan) AS BanTrong FROM Ban WHERE TrangThai = N'Trong'`);
         const monAnResult = await pool.request().query(`SELECT COUNT(MaSP) AS TongMon FROM SanPham WHERE TrangThai = 1`);
 
-        // 2. Dữ liệu Biểu đồ: 5 Sản phẩm bán chạy nhất
         const topProducts = await pool.request().query(`
             SELECT TOP 5 sp.TenSP, SUM(ct.SoLuong) as TongSoLuong
             FROM ChiTietHoaDon ct
@@ -186,7 +158,6 @@ app.get('/dashboard', async (req, res) => {
             ORDER BY TongSoLuong DESC
         `);
 
-        // 3. Dữ liệu Biểu đồ: Doanh thu theo Nhân viên
         const nvRevenue = await pool.request().query(`
             SELECT nv.TenNV, ISNULL(SUM(hd.TongTien), 0) as DoanhThu
             FROM NhanVien nv
@@ -200,16 +171,12 @@ app.get('/dashboard', async (req, res) => {
             soDon: soDonResult.recordset[0].SoDon,
             banTrong: banTrongResult.recordset[0].BanTrong,
             tongMon: monAnResult.recordset[0].TongMon,
-            
-            // Gửi cục data dạng JSON xuống Front-end để vẽ biểu đồ
             chartDataProducts: JSON.stringify(topProducts.recordset),
             chartDataRevenue: JSON.stringify(nvRevenue.recordset)
         });
-    } catch (err) {
-        console.log(err);
-        res.send('Lỗi tải bảng điều khiển!');
-    }
+    } catch (err) { res.send('Lỗi tải bảng điều khiển!'); }
 });
+
 // ==========================================
 //        4. BÀN
 // ==========================================
@@ -220,137 +187,91 @@ app.get('/tables', async (req, res) => {
         res.render('tables', { tables: result.recordset });
     } catch (err) { res.send('Lỗi!'); }
 });
-app.post('/tables/add', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        await pool.request().input('TenBan', req.body.tenBan).query("INSERT INTO Ban (TenBan, TrangThai) VALUES (@TenBan, N'Trong')");
-        res.redirect('/tables');
-    } catch (err) { res.send('Lỗi!'); }
-});
-// Thêm bàn mới (Đã nâng cấp có phân khu vực)
+
 app.post('/tables/add', async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
             .input('TenBan', req.body.tenBan)
             .input('KhuVuc', req.body.khuVuc)
-            .query(`INSERT INTO Ban (TenBan, TrangThai, KhuVuc) VALUES (@TenBan, N'Trong', @KhuVuc)`);
+            .input('SucChua', req.body.sucChua || 4)
+            .query(`INSERT INTO Ban (TenBan, TrangThai, KhuVuc, SucChua) VALUES (@TenBan, N'Trong', @KhuVuc, @SucChua)`);
         res.redirect('/tables');
-    } catch (err) {
-        console.error('Lỗi tạo bàn:', err);
-        res.send('Lỗi thêm bàn mới!');
-    }
+    } catch (err) { res.send('Lỗi thêm bàn mới!'); }
 });
-// Cập nhật Tên bàn và Khu vực
+
 app.post('/tables/edit', async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
-            .input('MaBan', req.body.maBan)
-            .input('TenBan', req.body.tenBan)
-            .input('KhuVuc', req.body.khuVuc)
-            .query(`UPDATE Ban SET TenBan = @TenBan, KhuVuc = @KhuVuc WHERE MaBan = @MaBan`);
+            .input('MaBan', req.body.maBan).input('TenBan', req.body.tenBan)
+            .input('KhuVuc', req.body.khuVuc).input('SucChua', req.body.sucChua || 4)
+            .query(`UPDATE Ban SET TenBan = @TenBan, KhuVuc = @KhuVuc, SucChua = @SucChua WHERE MaBan = @MaBan`);
         res.redirect('/tables');
-    } catch (err) {
-        console.error('Lỗi sửa bàn:', err);
-        res.send('Lỗi cập nhật thông tin bàn!');
-    }
+    } catch (err) { res.send('Lỗi cập nhật thông tin bàn!'); }
 });
-// ==========================================
-// API CHUYỂN BÀN
-// ==========================================
-app.post('/tables/transfer', async (req, res) => {
-    const { maBanCu, maBanMoi } = req.body;
-    
+
+// [ĐÃ THÊM] Xóa bàn
+app.post('/tables/delete', async (req, res) => {
     try {
         const pool = await poolPromise;
-        
-        // 1. Kiểm tra an toàn: Bàn mới phải đang "Trống" mới được chuyển tới
-        const checkBanMoi = await pool.request()
-            .input('MaBan', maBanMoi)
-            .query("SELECT TrangThai FROM Ban WHERE MaBan = @MaBan");
-            
+        const maBan = req.body.maBan;
+
+        // Kiểm tra xem bàn có đang phục vụ hoặc có người đặt không
+        const check = await pool.request().input('MaBan', maBan).query("SELECT TrangThai FROM Ban WHERE MaBan = @MaBan");
+        if(check.recordset.length > 0 && check.recordset[0].TrangThai !== 'Trong') {
+            return res.send('<script>alert("❌ Bàn đang có khách hoặc đã được đặt, KHÔNG THỂ XÓA!"); window.location.href="/tables";</script>');
+        }
+
+        // Thực hiện lệnh xóa
+        await pool.request().input('MaBan', maBan).query('DELETE FROM Ban WHERE MaBan = @MaBan');
+        res.redirect('/tables');
+    } catch (err) {
+        console.error('Lỗi xóa bàn:', err);
+        // Nếu dính khóa ngoại (đã từng có hóa đơn lịch sử) thì chặn lại
+        res.send('<script>alert("❌ Lỗi: Bàn này đã có lịch sử Hóa đơn hoặc Đặt bàn trước đây nên không thể xóa để bảo toàn dữ liệu thống kê!"); window.location.href="/tables";</script>');
+    }
+});
+
+app.post('/tables/transfer', async (req, res) => {
+    const { maBanCu, maBanMoi } = req.body;
+    try {
+        const pool = await poolPromise;
+        const checkBanMoi = await pool.request().input('MaBan', maBanMoi).query("SELECT TrangThai FROM Ban WHERE MaBan = @MaBan");
         if (checkBanMoi.recordset[0].TrangThai !== 'Trong') {
             return res.send('<script>alert("❌ Bàn mới đang có khách, không thể chuyển tới!"); window.location.href="/tables";</script>');
         }
-
-        // 2. Chuyển Hóa đơn chưa thanh toán sang bàn mới (nếu có)
-        await pool.request()
-            .input('MaBanCu', maBanCu)
-            .input('MaBanMoi', maBanMoi)
-            .query(`
-                UPDATE HoaDon 
-                SET MaBan = @MaBanMoi 
-                WHERE MaBan = @MaBanCu AND TrangThai = N'Chưa thanh toán'
-            `);
-
-        // 3. Giải phóng bàn cũ thành "Trống"
-        await pool.request()
-            .input('MaBanCu', maBanCu)
-            .query("UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = @MaBanCu");
-
-        // 4. Cập nhật bàn mới thành "Đang phục vụ"
-        await pool.request()
-            .input('MaBanMoi', maBanMoi)
-            .query("UPDATE Ban SET TrangThai = N'Đang phục vụ' WHERE MaBan = @MaBanMoi");
-
-        res.redirect('/tables');
-    } catch (err) {
-        console.error('Lỗi chuyển bàn:', err);
-        res.send('Lỗi hệ thống khi chuyển bàn!');
-    }
-});
-// ==========================================
-// API GỘP BÀN
-// ==========================================
-app.post('/tables/merge', async (req, res) => {
-    const { maBanCu, maBanMoi } = req.body;
-    
-    if (maBanCu === maBanMoi) {
-        return res.send('<script>alert("❌ Không thể gộp cùng một bàn!"); window.location.href="/tables";</script>');
-    }
-
-    try {
-        const pool = await poolPromise;
-        
-        // 1. Lấy Hóa đơn chưa thanh toán của Bàn Cũ và Bàn Mới
-        const hdCu = await pool.request().input('MaBan', maBanCu).query("SELECT MaHD, TongTien FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
-        const hdMoi = await pool.request().input('MaBan', maBanMoi).query("SELECT MaHD, TongTien FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
-
-        if (hdCu.recordset.length > 0) {
-            if (hdMoi.recordset.length > 0) {
-                // TRƯỜNG HỢP A: Cả 2 bàn đều có Hóa đơn -> Phải gộp chi tiết lại
-                const maHDCu = hdCu.recordset[0].MaHD;
-                const maHDMoi = hdMoi.recordset[0].MaHD;
-                const tienCu = hdCu.recordset[0].TongTien || 0;
-
-                // - Chuyển món ăn sang Hóa đơn mới
-                await pool.request().input('MaHDCu', maHDCu).input('MaHDMoi', maHDMoi)
-                    .query("UPDATE ChiTietHoaDon SET MaHD = @MaHDMoi WHERE MaHD = @MaHDCu");
-                // - Cộng dồn tiền
-                await pool.request().input('MaHDMoi', maHDMoi).input('TienCu', tienCu)
-                    .query("UPDATE HoaDon SET TongTien = TongTien + @TienCu WHERE MaHD = @MaHDMoi");
-                // - Xóa hóa đơn cũ
-                await pool.request().input('MaHDCu', maHDCu).query("DELETE FROM HoaDon WHERE MaHD = @MaHDCu");
-            } else {
-                // TRƯỜNG HỢP B: Bàn mới chưa gọi món -> Chỉ cần đổi Mã bàn của Hóa đơn cũ
-                await pool.request().input('MaBanMoi', maBanMoi).input('MaHDCu', hdCu.recordset[0].MaHD)
-                    .query("UPDATE HoaDon SET MaBan = @MaBanMoi WHERE MaHD = @MaHDCu");
-            }
-        }
-
-        // 2. Cập nhật trạng thái 2 Bàn
+        await pool.request().input('MaBanCu', maBanCu).input('MaBanMoi', maBanMoi).query(`UPDATE HoaDon SET MaBan = @MaBanMoi WHERE MaBan = @MaBanCu AND TrangThai = N'Chưa thanh toán'`);
         await pool.request().input('MaBanCu', maBanCu).query("UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = @MaBanCu");
         await pool.request().input('MaBanMoi', maBanMoi).query("UPDATE Ban SET TrangThai = N'Đang phục vụ' WHERE MaBan = @MaBanMoi");
-
         res.redirect('/tables');
-    } catch (err) {
-        console.error('Lỗi gộp bàn:', err);
-        res.send('Lỗi hệ thống khi gộp bàn!');
-    }
+    } catch (err) { res.send('Lỗi hệ thống khi chuyển bàn!'); }
+});
+
+app.post('/tables/merge', async (req, res) => {
+    const { maBanCu, maBanMoi } = req.body;
+    if (maBanCu === maBanMoi) return res.send('<script>alert("❌ Không thể gộp cùng một bàn!"); window.location.href="/tables";</script>');
+    try {
+        const pool = await poolPromise;
+        const hdCu = await pool.request().input('MaBan', maBanCu).query("SELECT MaHD, TongTien FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
+        const hdMoi = await pool.request().input('MaBan', maBanMoi).query("SELECT MaHD, TongTien FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
+        if (hdCu.recordset.length > 0) {
+            if (hdMoi.recordset.length > 0) {
+                const maHDCu = hdCu.recordset[0].MaHD; const maHDMoi = hdMoi.recordset[0].MaHD; const tienCu = hdCu.recordset[0].TongTien || 0;
+                await pool.request().input('MaHDCu', maHDCu).input('MaHDMoi', maHDMoi).query("UPDATE ChiTietHoaDon SET MaHD = @MaHDMoi WHERE MaHD = @MaHDCu");
+                await pool.request().input('MaHDMoi', maHDMoi).input('TienCu', tienCu).query("UPDATE HoaDon SET TongTien = TongTien + @TienCu WHERE MaHD = @MaHDMoi");
+                await pool.request().input('MaHDCu', maHDCu).query("DELETE FROM HoaDon WHERE MaHD = @MaHDCu");
+            } else {
+                await pool.request().input('MaBanMoi', maBanMoi).input('MaHDCu', hdCu.recordset[0].MaHD).query("UPDATE HoaDon SET MaBan = @MaBanMoi WHERE MaHD = @MaHDCu");
+            }
+        }
+        await pool.request().input('MaBanCu', maBanCu).query("UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = @MaBanCu");
+        await pool.request().input('MaBanMoi', maBanMoi).query("UPDATE Ban SET TrangThai = N'Đang phục vụ' WHERE MaBan = @MaBanMoi");
+        res.redirect('/tables');
+    } catch (err) { res.send('Lỗi hệ thống khi gộp bàn!'); }
 });
 // ==========================================
-//        5. DANH MỤC
+//        5 & 6. DANH MỤC VÀ SẢN PHẨM
 // ==========================================
 app.get('/categories', async (req, res) => {
     try {
@@ -362,172 +283,114 @@ app.get('/categories', async (req, res) => {
 app.post('/categories/add', async (req, res) => {
     try {
         const pool = await poolPromise;
-        await pool.request().input('TenDM', req.body.tenDM).input('MoTa', req.body.moTa).query('INSERT INTO DanhMuc (TenDM, MoTa) VALUES (@TenDM, @MoTa)');
-        res.redirect('/categories');
-    } catch (err) { res.send('Lỗi!'); }
+        await pool.request().input('TenDM', req.body.tenDM).query('INSERT INTO DanhMuc (TenDM) VALUES (@TenDM)');
+        res.redirect('/products');
+    } catch (err) { res.send('Lỗi thêm danh mục!'); }
+});
+app.post('/categories/edit', async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        await pool.request().input('MaDM', req.body.maDM).input('TenDM', req.body.tenDM).query('UPDATE DanhMuc SET TenDM = @TenDM WHERE MaDM = @MaDM');
+        res.redirect('/products');
+    } catch (err) { res.send('Lỗi sửa danh mục!'); }
+});
+app.post('/categories/delete', async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        await pool.request().input('MaDM', req.body.maDM).query('DELETE FROM DanhMuc WHERE MaDM = @MaDM');
+        res.redirect('/products');
+    } catch (err) { res.send('<script>alert("❌ Lỗi: Không thể xóa Danh mục đang có món ăn bên trong!"); window.location.href="/products";</script>'); }
 });
 
-// ==========================================
-//        6. SẢN PHẨM
-// ==========================================
 app.get('/products', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const products = await pool.request().query(`SELECT sp.*, dm.TenDM FROM SanPham sp LEFT JOIN DanhMuc dm ON sp.MaDM = dm.MaDM ORDER BY sp.MaSP DESC`);
+        const products = await pool.request().query(`
+            SELECT sp.*, dm.TenDM FROM SanPham sp 
+            LEFT JOIN DanhMuc dm ON sp.MaDM = dm.MaDM 
+            ORDER BY dm.TenDM ASC, sp.TenSP ASC
+        `);
         const categories = await pool.request().query('SELECT * FROM DanhMuc');
         res.render('products', { products: products.recordset, categories: categories.recordset });
-    } catch (err) { res.send('Lỗi!'); }
+    } catch (err) { res.send('Lỗi tải trang quản lý sản phẩm!'); }
 });
 app.post('/products/add', async (req, res) => {
     try {
         const pool = await poolPromise;
-        // Lấy dữ liệu, nếu khách không nhập link ảnh thì lấy ảnh mặc định
         let linkAnh = req.body.hinhAnh || 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=200';
-        
         await pool.request()
-            .input('TenSP', req.body.tenSP)
-            .input('DonGia', req.body.donGia)
-            .input('MaDM', req.body.maDM)
-            .input('TrangThai', req.body.trangThai)
-            .input('HinhAnh', linkAnh)
+            .input('TenSP', req.body.tenSP).input('DonGia', req.body.donGia).input('MaDM', req.body.maDM).input('TrangThai', req.body.trangThai).input('HinhAnh', linkAnh)
             .query('INSERT INTO SanPham (TenSP, DonGia, MaDM, TrangThai, HinhAnh) VALUES (@TenSP, @DonGia, @MaDM, @TrangThai, @HinhAnh)');
         res.redirect('/products');
     } catch (err) { res.send('Lỗi thêm sản phẩm!'); }
-    
 });
-// Cập nhật thông tin và hình ảnh sản phẩm
 app.post('/products/edit', async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
-            .input('MaSP', req.body.maSP)
-            .input('TenSP', req.body.tenSP)
-            .input('DonGia', req.body.donGia)
-            .input('MaDM', req.body.maDM)
-            .input('TrangThai', req.body.trangThai)
-            .input('HinhAnh', req.body.hinhAnh)
-            .query(`
-                UPDATE SanPham 
-                SET TenSP = @TenSP, DonGia = @DonGia, MaDM = @MaDM, TrangThai = @TrangThai, HinhAnh = @HinhAnh 
-                WHERE MaSP = @MaSP
-            `);
+            .input('MaSP', req.body.maSP).input('TenSP', req.body.tenSP).input('DonGia', req.body.donGia).input('MaDM', req.body.maDM).input('TrangThai', req.body.trangThai).input('HinhAnh', req.body.hinhAnh)
+            .query(`UPDATE SanPham SET TenSP = @TenSP, DonGia = @DonGia, MaDM = @MaDM, TrangThai = @TrangThai, HinhAnh = @HinhAnh WHERE MaSP = @MaSP`);
         res.redirect('/products');
-    } catch (err) {
-        console.log(err);
-        res.send('Lỗi cập nhật sản phẩm!');
-    }
+    } catch (err) { res.send('Lỗi cập nhật sản phẩm!'); }
 });
-// Xóa sản phẩm
 app.post('/products/delete', async (req, res) => {
     try {
         const pool = await poolPromise;
-        await pool.request()
-            .input('MaSP', req.body.maSP)
-            .query('DELETE FROM SanPham WHERE MaSP = @MaSP');
+        await pool.request().input('MaSP', req.body.maSP).query('DELETE FROM SanPham WHERE MaSP = @MaSP');
         res.redirect('/products');
-    } catch (err) {
-        console.error('Lỗi xóa sản phẩm:', err);
-        res.send('Lỗi: Không thể xóa sản phẩm đã có lịch sử đơn hàng. Hãy dùng chức năng "Ngừng Bán".');
-    }
+    } catch (err) { res.send('Lỗi: Không thể xóa sản phẩm đã có lịch sử đơn hàng.'); }
 });
-// ==========================================
-// ==========================================
-// ==========================================
+
 // ==========================================
 //        7. NHÂN SỰ & CẤP TÀI KHOẢN
 // ==========================================
-
-// --- PHẦN BỊ THIẾU: Hiển thị trang Nhân Sự ---
 app.get('/employees', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request().query(`
             SELECT nv.*, tk.TenDangNhap, tk.VaiTro 
-            FROM NhanVien nv 
-            LEFT JOIN TaiKhoan tk ON nv.MaNV = tk.MaNV 
-            ORDER BY nv.MaNV DESC
+            FROM NhanVien nv LEFT JOIN TaiKhoan tk ON nv.MaNV = tk.MaNV ORDER BY nv.MaNV DESC
         `);
         res.render('employees', { employees: result.recordset });
-    } catch (err) {
-        console.error('Lỗi tải danh sách nhân viên:', err);
-        res.send('Lỗi tải danh sách nhân viên!');
-    }
+    } catch (err) { res.send('Lỗi tải danh sách nhân viên!'); }
 });
-
-// 1. Thêm nhân viên mới
 app.post('/employees/add', async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
-            .input('TenNV', req.body.tenNV)
-            .input('SoDienThoai', req.body.soDienThoai)
-            .input('Email', req.body.email)
-            .input('NgayVaoLam', req.body.ngayVaoLam)
-            .input('ChucVu', req.body.chucVu)
+            .input('TenNV', req.body.tenNV).input('SoDienThoai', req.body.soDienThoai).input('Email', req.body.email).input('NgayVaoLam', req.body.ngayVaoLam).input('ChucVu', req.body.chucVu)
             .query(`INSERT INTO NhanVien (TenNV, SoDienThoai, Email, NgayVaoLam, ChucVu) VALUES (@TenNV, @SoDienThoai, @Email, @NgayVaoLam, @ChucVu)`);
         res.redirect('/employees');
     } catch (err) { res.send('Lỗi thêm nhân viên!'); }
 });
-
-// 2. Sửa thông tin & Chức vụ nhân viên
 app.post('/employees/edit', async (req, res) => {
     try {
         const pool = await poolPromise;
-        await pool.request()
-            .input('MaNV', req.body.maNV)
-            .input('TenNV', req.body.tenNV)
-            .input('SoDienThoai', req.body.soDienThoai)
-            .input('ChucVu', req.body.chucVu)
+        await pool.request().input('MaNV', req.body.maNV).input('TenNV', req.body.tenNV).input('SoDienThoai', req.body.soDienThoai).input('ChucVu', req.body.chucVu)
             .query(`UPDATE NhanVien SET TenNV = @TenNV, SoDienThoai = @SoDienThoai, ChucVu = @ChucVu WHERE MaNV = @MaNV`);
         res.redirect('/employees');
-    } catch (err) { 
-        // Thêm dòng lệnh này để "bắt tận tay" lỗi
-        console.log("=== LỖI SỬA NHÂN VIÊN ===", err); 
-        res.send('Lỗi sửa nhân viên!'); 
-    }
+    } catch (err) { res.send('Lỗi sửa nhân viên!'); }
 });
-
-// 2.5 Xóa Nhân Viên
 app.post('/employees/delete', async (req, res) => {
     try {
         const pool = await poolPromise;
-        // Xóa tài khoản liên kết trước (nếu có) do ràng buộc khóa ngoại
         await pool.request().input('MaNV', req.body.maNV).query('DELETE FROM TaiKhoan WHERE MaNV = @MaNV');
-        // Sau đó xóa nhân viên
         await pool.request().input('MaNV', req.body.maNV).query('DELETE FROM NhanVien WHERE MaNV = @MaNV');
         res.redirect('/employees');
-    } catch (err) { 
-        console.error('Lỗi xóa nhân viên:', err);
-        res.send('Không thể xóa nhân viên này. Hãy chắc chắn họ không bị ràng buộc bởi dữ liệu khác (ví dụ: người lập hóa đơn).'); 
-    }
+    } catch (err) { res.send('Không thể xóa nhân viên này.'); }
 });
-
-// 3. Cấp tài khoản đăng nhập cho nhân viên
 app.post('/employees/create-account', async (req, res) => {
     const { maNV, tenDangNhap, matKhau, vaiTro } = req.body;
     try {
         const pool = await poolPromise;
         const check = await pool.request().input('MaNV', maNV).query('SELECT * FROM TaiKhoan WHERE MaNV = @MaNV');
-        
         if (check.recordset.length > 0) {
-            await pool.request()
-                .input('MaNV', maNV)
-                .input('TenDangNhap', tenDangNhap)
-                .input('MatKhau', matKhau)
-                .input('VaiTro', vaiTro)
-                .query(`UPDATE TaiKhoan SET TenDangNhap = @TenDangNhap, MatKhau = @MatKhau, VaiTro = @VaiTro WHERE MaNV = @MaNV`);
+            await pool.request().input('MaNV', maNV).input('TenDangNhap', tenDangNhap).input('MatKhau', matKhau).input('VaiTro', vaiTro).query(`UPDATE TaiKhoan SET TenDangNhap = @TenDangNhap, MatKhau = @MatKhau, VaiTro = @VaiTro WHERE MaNV = @MaNV`);
         } else {
-            await pool.request()
-                .input('MaNV', maNV)
-                .input('TenDangNhap', tenDangNhap)
-                .input('MatKhau', matKhau)
-                .input('VaiTro', vaiTro)
-                .query(`INSERT INTO TaiKhoan (MaNV, TenDangNhap, MatKhau, VaiTro) VALUES (@MaNV, @TenDangNhap, @MatKhau, @VaiTro)`);
+            await pool.request().input('MaNV', maNV).input('TenDangNhap', tenDangNhap).input('MatKhau', matKhau).input('VaiTro', vaiTro).query(`INSERT INTO TaiKhoan (MaNV, TenDangNhap, MatKhau, VaiTro) VALUES (@MaNV, @TenDangNhap, @MatKhau, @VaiTro)`);
         }
         res.redirect('/employees');
-    } catch (err) {
-        res.send('Lỗi cấp tài khoản (Có thể Tên đăng nhập đã bị trùng)!');
-    }
+    } catch (err) { res.send('Lỗi cấp tài khoản (Có thể Tên đăng nhập đã bị trùng)!'); }
 });
 
 // ==========================================
@@ -541,25 +404,15 @@ app.get('/pos', async (req, res) => {
         res.render('pos', { tables: tablesResult.recordset, products: productsResult.recordset });
     } catch (err) { res.send('Lỗi!'); }
 });
-// ==========================================
-// ==========================================
-//        8. NGHIỆP VỤ POS CHUYÊN SÂU
-// ==========================================
 
-// 1. Kéo dữ liệu món ăn đang dùng dở của Bàn ra màn hình POS (Giữ nguyên đoạn này nếu bạn đang có)
 app.get('/api/table-order/:maBan', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const hd = await pool.request()
-            .input('MaBan', req.params.maBan)
-            .query("SELECT MaHD FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
-        
+        const hd = await pool.request().input('MaBan', req.params.maBan).query("SELECT MaHD FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
         if (hd.recordset.length > 0) {
-            const maHD = hd.recordset[0].MaHD;
-            const chiTiet = await pool.request().input('MaHD', maHD).query(`
+            const chiTiet = await pool.request().input('MaHD', hd.recordset[0].MaHD).query(`
                 SELECT ct.MaSP as maSP, sp.TenSP as tenSP, ct.DonGia as donGia, ct.SoLuong as soLuong
-                FROM ChiTietHoaDon ct JOIN SanPham sp ON ct.MaSP = sp.MaSP
-                WHERE ct.MaHD = @MaHD
+                FROM ChiTietHoaDon ct JOIN SanPham sp ON ct.MaSP = sp.MaSP WHERE ct.MaHD = @MaHD
             `);
             res.json({ success: true, cart: chiTiet.recordset });
         } else {
@@ -568,108 +421,148 @@ app.get('/api/table-order/:maBan', async (req, res) => {
     } catch (err) { res.json({ success: false }); }
 });
 
-// [MỚI] 2. API Quét Số điện thoại khách hàng
 app.get('/api/customer/:phone', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const check = await pool.request().input('SDT', req.params.phone)
-            .query('SELECT * FROM KhachHang WHERE SoDienThoai = @SDT');
-        if (check.recordset.length > 0) {
-            res.json({ success: true, data: check.recordset[0] });
-        } else {
-            res.json({ success: false }); // Không tìm thấy -> Khách mới
-        }
+        const check = await pool.request().input('SDT', req.params.phone).query('SELECT * FROM KhachHang WHERE SoDienThoai = @SDT');
+        if (check.recordset.length > 0) res.json({ success: true, data: check.recordset[0] });
+        else res.json({ success: false });
     } catch (err) { res.json({ success: false }); }
 });
 
-// [NÂNG CẤP] 3. Xử lý LƯU ORDER hoặc THANH TOÁN (CÓ TÍCH ĐIỂM)
+// ==========================================
+// XỬ LÝ POS: KHÓA HÓA ĐƠN & LƯU VẾT THAO TÁC
+// ==========================================
 app.post('/pos/process', async (req, res) => {
-    // Lấy thêm thông tin SĐT và Tên khách từ giao diện
-    const { maBan, cart, action, sdtKhach, tenKhach } = req.body; 
-    
+    const { maBan, cart, action, sdtKhach, tenKhach, lyDoHuy } = req.body; 
+    const tenThuNgan = req.session.user ? req.session.user.tenNV : 'Hệ thống';
+
     try {
         const pool = await poolPromise;
+        
+        // 1. Kiểm tra trạng thái Hóa đơn hiện tại của Bàn
+        const checkHD = await pool.request().input('MaBan', maBan).query("SELECT MaHD, TrangThai FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
+        let maHD = checkHD.recordset.length > 0 ? checkHD.recordset[0].MaHD : 0;
+
+        // [BẢO MẬT] Ngăn chặn tác động nếu hóa đơn không tồn tại mà đòi Hủy/Thanh toán
+        if (maHD === 0 && action !== 'save') {
+            return res.json({ success: false, message: 'Bàn này chưa có hóa đơn để xử lý!' });
+        }
+
+        // ==========================================
+        // NGHIỆP VỤ 1: HỦY HÓA ĐƠN
+        // ==========================================
+        if (action === 'cancel') {
+            await pool.request().input('MaHD', maHD).input('LyDo', lyDoHuy || 'Khách đổi ý')
+                .query("UPDATE HoaDon SET TrangThai = N'Đã hủy', LyDoHuy = @LyDo WHERE MaHD = @MaHD");
+            await pool.request().input('MaBan', maBan).query("UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = @MaBan");
+            
+            // Lưu vết
+            await pool.request().input('MaHD', maHD).input('NV', tenThuNgan).input('HanhDong', `Hủy hóa đơn. Lý do: ${lyDoHuy}`)
+                .query("INSERT INTO LichSuThaoTac (MaHD, TenNhanVien, HanhDong) VALUES (@MaHD, @NV, @HanhDong)");
+                
+            return res.json({ success: true, message: 'Đã hủy hóa đơn và giải phóng bàn!' });
+        }
+
+        // ==========================================
+        // NGHIỆP VỤ 2: LƯU ORDER & THANH TOÁN
+        // ==========================================
         const tongTien = cart.reduce((sum, item) => sum + (item.donGia * item.soLuong), 0);
-        const trangThaiHD = (action === 'pay') ? 'Đã thanh toán' : 'Chưa thanh toán';
-        const trangThaiBan = (action === 'pay') ? 'Trong' : 'Đang phục vụ';
+        let maKH_db = null; 
 
-        let maKH_db = null; // Biến lưu Mã Khách Hàng
-
-        // ---> NGHIỆP VỤ TÍCH ĐIỂM (Chỉ tính khi Thanh toán và Thu ngân có nhập SĐT) <---
+        // Xử lý Khách hàng & Tích điểm (Chỉ khi Thanh toán)
         if (action === 'pay' && sdtKhach) {
-            const diemCong = Math.floor(tongTien / 10000); // 10k = 1 điểm
-            
+            const diemCong = Math.floor(tongTien / 10000); 
             const checkKhach = await pool.request().input('SDT', sdtKhach).query("SELECT MaKH FROM KhachHang WHERE SoDienThoai = @SDT");
-            
             if (checkKhach.recordset.length > 0) {
-                // Khách Cũ: Lấy mã KH và Cộng điểm
                 maKH_db = checkKhach.recordset[0].MaKH;
-                await pool.request().input('MaKH', maKH_db).input('Diem', diemCong)
-                    .query("UPDATE KhachHang SET DiemTichLuy = DiemTichLuy + @Diem WHERE MaKH = @MaKH");
+                await pool.request().input('MaKH', maKH_db).input('Diem', diemCong).query("UPDATE KhachHang SET DiemTichLuy = DiemTichLuy + @Diem WHERE MaKH = @MaKH");
             } else {
-                // Khách Mới: Lưu thông tin và cộng điểm đầu tiên
-                const insertKhach = await pool.request()
-                    .input('TenKH', tenKhach || 'Khách vãng lai').input('SDT', sdtKhach).input('Diem', diemCong)
+                const insertKhach = await pool.request().input('TenKH', tenKhach || 'Khách vãng lai').input('SDT', sdtKhach).input('Diem', diemCong)
                     .query("INSERT INTO KhachHang (TenKH, SoDienThoai, DiemTichLuy) OUTPUT INSERTED.MaKH VALUES (@TenKH, @SDT, @Diem)");
                 maKH_db = insertKhach.recordset[0].MaKH;
             }
         }
 
-        // 1. Lưu Hóa đơn
-        const checkHD = await pool.request().input('MaBan', maBan).query("SELECT MaHD FROM HoaDon WHERE MaBan = @MaBan AND TrangThai = N'Chưa thanh toán'");
-        let maHD = 0;
-        
-        if (checkHD.recordset.length > 0) {
-            maHD = checkHD.recordset[0].MaHD;
-            // Nếu có mã KH thì update gắn vào Hóa đơn
+        let logAction = "";
+
+        if (maHD > 0) {
+            // Hóa đơn đã tồn tại -> Sửa món / Cập nhật
+            const trangThaiHD = (action === 'pay') ? 'Đã thanh toán' : 'Chưa thanh toán';
             let updateQuery = "UPDATE HoaDon SET TongTien = @TongTien, TrangThai = @TrangThai WHERE MaHD = @MaHD";
             if (maKH_db) updateQuery = "UPDATE HoaDon SET TongTien = @TongTien, TrangThai = @TrangThai, MaKH = @MaKH WHERE MaHD = @MaHD";
             
             await pool.request().input('MaHD', maHD).input('TongTien', tongTien).input('TrangThai', trangThaiHD).input('MaKH', maKH_db).query(updateQuery);
-            // Xóa chi tiết cũ để chèn lại
-            await pool.request().input('MaHD', maHD).query("DELETE FROM ChiTietHoaDon WHERE MaHD = @MaHD");
+            await pool.request().input('MaHD', maHD).query("DELETE FROM ChiTietHoaDon WHERE MaHD = @MaHD"); // Xóa chi tiết cũ
+            
+            logAction = (action === 'pay') ? "Thanh toán hóa đơn" : "Cập nhật lại món ăn";
         } else {
-            // Tạo Hóa đơn mới
-            const insertHD = await pool.request().input('MaBan', maBan).input('TongTien', tongTien).input('TrangThai', trangThaiHD).input('MaKH', maKH_db)
-                .query("INSERT INTO HoaDon (MaBan, MaNV, NgayLap, TongTien, TrangThai, MaKH) OUTPUT INSERTED.MaHD VALUES (@MaBan, 1, GETDATE(), @TongTien, @TrangThai, @MaKH)");
+            // Tạo Hóa đơn mới hoàn toàn
+            const insertHD = await pool.request().input('MaBan', maBan).input('TongTien', tongTien).input('MaKH', maKH_db)
+                .query("INSERT INTO HoaDon (MaBan, MaNV, NgayLap, TongTien, TrangThai, MaKH) OUTPUT INSERTED.MaHD VALUES (@MaBan, 1, GETDATE(), @TongTien, N'Chưa thanh toán', @MaKH)");
             maHD = insertHD.recordset[0].MaHD;
+            logAction = "Tạo mới hóa đơn";
         }
 
-        // 2. Chèn danh sách món ăn vào Hóa đơn
+        // Chèn danh sách món mới nhất
         for (let item of cart) {
             await pool.request().input('MaHD', maHD).input('MaSP', item.maSP).input('SoLuong', item.soLuong).input('DonGia', item.donGia)
                 .query("INSERT INTO ChiTietHoaDon (MaHD, MaSP, SoLuong, DonGia) VALUES (@MaHD, @MaSP, @SoLuong, @DonGia)");
         }
-        
-        // 3. Cập nhật trạng thái Bàn
-        await pool.request().input('MaBan', maBan).input('TrangThai', trangThaiBan)
-            .query("UPDATE Ban SET TrangThai = @TrangThai WHERE MaBan = @MaBan");
 
-        // Tạo câu thông báo trả về
-        let msg = action === 'save' ? '✅ Đã lưu order xuống bếp!' : '✅ Thanh toán thành công!';
-        if (action === 'pay' && sdtKhach) msg += ` (Đã cộng ${Math.floor(tongTien / 10000)} điểm vào ví)`;
-        
+        // Cập nhật trạng thái Bàn & Lưu Log
+        if (action === 'pay') {
+            await pool.request().input('MaBan', maBan).query("UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = @MaBan"); // Tự trả bàn về Trống
+        } else {
+            await pool.request().input('MaBan', maBan).query("UPDATE Ban SET TrangThai = N'Đang phục vụ' WHERE MaBan = @MaBan");
+        }
+
+        // Lưu vết vào hệ thống
+        await pool.request().input('MaHD', maHD).input('NV', tenThuNgan).input('HanhDong', logAction)
+            .query("INSERT INTO LichSuThaoTac (MaHD, TenNhanVien, HanhDong) VALUES (@MaHD, @NV, @HanhDong)");
+
+        let msg = action === 'save' ? '✅ Đã lưu order!' : '✅ Đã khóa Hóa đơn và Thanh toán thành công!';
         res.json({ success: true, message: msg });
+
     } catch (err) {
-        console.error(err); res.json({ success: false, message: 'Lỗi máy chủ POS!' });
+        console.error(err); res.json({ success: false, message: 'Lỗi hệ thống POS!' });
     }
 });
-
 // ==========================================
-//        9. HÓA ĐƠN
+//        9. HÓA ĐƠN & NHẬT KÝ HỆ THỐNG
 // ==========================================
 app.get('/invoices', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const result = await pool.request().query(`SELECT hd.MaHD, hd.MaBan, b.TenBan, nv.TenNV, hd.NgayLap, hd.TongTien, hd.TrangThai FROM HoaDon hd LEFT JOIN Ban b ON hd.MaBan = b.MaBan LEFT JOIN NhanVien nv ON hd.MaNV = nv.MaNV ORDER BY hd.NgayLap DESC`);
-        res.render('invoices', { invoices: result.recordset });
-    } catch (err) { res.send('Lỗi!'); }
+        
+        // 1. Tải danh sách Hóa Đơn (Kéo thêm cột LyDoHuy)
+        const invoicesResult = await pool.request().query(`
+            SELECT hd.MaHD, hd.MaBan, b.TenBan, nv.TenNV, hd.NgayLap, hd.TongTien, hd.TrangThai, hd.LyDoHuy 
+            FROM HoaDon hd 
+            LEFT JOIN Ban b ON hd.MaBan = b.MaBan 
+            LEFT JOIN NhanVien nv ON hd.MaNV = nv.MaNV 
+            ORDER BY hd.NgayLap DESC
+        `);
+
+        // 2. Tải Nhật ký thao tác (Audit Log)
+        const logsResult = await pool.request().query(`
+            SELECT * FROM LichSuThaoTac 
+            ORDER BY ThoiGian DESC
+        `);
+
+        res.render('invoices', { 
+            invoices: invoicesResult.recordset, 
+            logs: logsResult.recordset 
+        });
+    } catch (err) { 
+        console.error(err);
+        res.send('Lỗi tải trang hóa đơn!'); 
+    }
 });
 app.get('/api/invoices/:id', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const result = await pool.request().input('MaHD', req.params.id)
-            .query(`SELECT sp.TenSP, ct.SoLuong, ct.DonGia, (ct.SoLuong * ct.DonGia) as ThanhTien FROM ChiTietHoaDon ct JOIN SanPham sp ON ct.MaSP = sp.MaSP WHERE ct.MaHD = @MaHD`);
+        const result = await pool.request().input('MaHD', req.params.id).query(`SELECT sp.TenSP, ct.SoLuong, ct.DonGia, (ct.SoLuong * ct.DonGia) as ThanhTien FROM ChiTietHoaDon ct JOIN SanPham sp ON ct.MaSP = sp.MaSP WHERE ct.MaHD = @MaHD`);
         res.json(result.recordset);
     } catch (err) { res.status(500).json({ error: 'Lỗi' }); }
 });
@@ -683,30 +576,97 @@ app.post('/invoices/pay', async (req, res) => {
 });
 
 // ==========================================
-//        10. ĐẶT BÀN
+//        10. ĐẶT BÀN & LIÊN KẾT BÀN
 // ==========================================
 app.post('/api/book-table', async (req, res) => {
+    const { tenKhach, sdt, ngayDat, gioDat, soNguoi, ghiChu } = req.body;
     try {
         const pool = await poolPromise;
         await pool.request()
-            .input('TenKhachHang', req.body.tenKhach).input('SoDienThoai', req.body.sdt).input('NgayDat', req.body.ngayDat).input('GioDat', req.body.gioDat).input('SoNguoi', req.body.soNguoi).input('GhiChu', req.body.ghiChu)
-            .query(`INSERT INTO DatBan (TenKhachHang, SoDienThoai, NgayDat, GioDat, SoNguoi, GhiChu, TrangThai) VALUES (@TenKhachHang, @SoDienThoai, @NgayDat, @GioDat, @SoNguoi, @GhiChu, N'Chờ xác nhận')`);
-        res.json({ success: true });
-    } catch (err) { res.json({ success: false, message: 'Lỗi' }); }
+            // Đã sửa lại thành TenKhachHang cho khớp với SQL Server của bạn
+            .input('TenKhachHang', tenKhach).input('SDT', sdt).input('NgayDat', ngayDat).input('GioDat', gioDat).input('SoNguoi', soNguoi).input('GhiChu', ghiChu || '')
+            .query(`INSERT INTO DatBan (TenKhachHang, SoDienThoai, NgayDat, GioDat, SoNguoi, GhiChu, TrangThai) VALUES (@TenKhachHang, @SDT, @NgayDat, @GioDat, @SoNguoi, @GhiChu, N'Chờ xác nhận')`);
+        res.json({ success: true, message: '🎉 Đặt bàn thành công! Quán sẽ sớm liên hệ để xác nhận.' });
+    } catch (err) { 
+        console.log("=== LỖI ĐẶT BÀN ===", err); // In lỗi ra màn hình Terminal để kiểm soát
+        res.json({ success: false, message: 'Lỗi hệ thống, vui lòng thử lại sau!' }); 
+    }
 });
+
 app.get('/bookings', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const result = await pool.request().query('SELECT * FROM DatBan ORDER BY NgayDat DESC, GioDat DESC');
-        res.render('bookings', { bookings: result.recordset });
-    } catch (err) { res.send('Lỗi'); }
+        // Đổi tên giả (alias) thành TenKhach để tương thích với file EJS
+        const result = await pool.request().query(`
+            SELECT d.*, d.TenKhachHang as TenKhach, b.TenBan, b.KhuVuc 
+            FROM DatBan d LEFT JOIN Ban b ON d.MaBan = b.MaBan ORDER BY NgayDat DESC, GioDat DESC
+        `);
+        const tables = await pool.request().query("SELECT * FROM Ban WHERE TrangThai = N'Trong'");
+        res.render('bookings', { bookings: result.recordset, tables: tables.recordset });
+    } catch (err) { res.send('Lỗi tải danh sách đặt bàn!'); }
 });
-app.post('/bookings/update', async (req, res) => {
+
+app.post('/bookings/update-status', async (req, res) => {
+    const { id, status, maBan } = req.body;
     try {
         const pool = await poolPromise;
-        await pool.request().input('MaDatBan', req.body.maDatBan).input('TrangThai', req.body.trangThai).query('UPDATE DatBan SET TrangThai = @TrangThai WHERE MaDatBan = @MaDatBan');
-        res.redirect('/bookings');
-    } catch (err) { res.send('Lỗi'); }
+        const currentBooking = await pool.request().input('ID', id).query("SELECT MaBan FROM DatBan WHERE MaDatBan = @ID");
+        const currentMaBan = currentBooking.recordset[0]?.MaBan;
+
+        if (status === 'Đã xác nhận') {
+            await pool.request().input('ID', id).input('MaBan', maBan).query("UPDATE DatBan SET TrangThai = N'Đã xác nhận', MaBan = @MaBan WHERE MaDatBan = @ID");
+            await pool.request().input('MaBan', maBan).query("UPDATE Ban SET TrangThai = N'Đã đặt' WHERE MaBan = @MaBan");
+        } 
+        else if (status === 'Đã hủy') {
+            await pool.request().input('ID', id).query("UPDATE DatBan SET TrangThai = N'Đã hủy' WHERE MaDatBan = @ID");
+            if (currentMaBan) await pool.request().input('MaBan', currentMaBan).query("UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = @MaBan");
+        }
+        else if (status === 'Đã đến') {
+            await pool.request().input('ID', id).query("UPDATE DatBan SET TrangThai = N'Đã đến' WHERE MaDatBan = @ID");
+            if (currentMaBan) await pool.request().input('MaBan', currentMaBan).query("UPDATE Ban SET TrangThai = N'Đang phục vụ' WHERE MaBan = @MaBan");
+        }
+        res.json({ success: true, message: 'Đã cập nhật trạng thái!' });
+    } catch (err) { res.json({ success: false, message: 'Lỗi khi cập nhật!' }); }
+    //  API Sửa chi tiết Đặt Bàn & Đổi Bàn
+app.post('/bookings/edit-details', async (req, res) => {
+    const { id, ngayDat, gioDat, soNguoi, ghiChu, maBanMoi, trangThaiHienTai } = req.body;
+    try {
+        const pool = await poolPromise;
+        
+        // 1. Lấy thông tin bàn cũ đang giữ (nếu có)
+        const currentBooking = await pool.request().input('ID', id).query("SELECT MaBan FROM DatBan WHERE MaDatBan = @ID");
+        const maBanCu = currentBooking.recordset[0]?.MaBan;
+
+        // 2. Nếu khách Đã xác nhận và Thu ngân muốn đổi sang bàn khác
+        let finalMaBan = maBanCu;
+        if (trangThaiHienTai === 'Đã xác nhận' && maBanMoi && maBanMoi != maBanCu) {
+            // Giải phóng bàn cũ (chuyển về Trống)
+            if (maBanCu) await pool.request().input('MaBanCu', maBanCu).query("UPDATE Ban SET TrangThai = N'Trong' WHERE MaBan = @MaBanCu");
+            // Khóa bàn mới (chuyển thành Đã đặt)
+            await pool.request().input('MaBanMoi', maBanMoi).query("UPDATE Ban SET TrangThai = N'Đã đặt' WHERE MaBan = @MaBanMoi");
+            finalMaBan = maBanMoi; // Cập nhật mã bàn mới để lưu vào phiếu đặt
+        }
+
+        // 3. Cập nhật mọi thông tin mới vào phiếu Đặt Bàn
+        await pool.request()
+            .input('ID', id)
+            .input('NgayDat', ngayDat)
+            .input('GioDat', gioDat)
+            .input('SoNguoi', soNguoi)
+            .input('GhiChu', ghiChu)
+            .input('MaBan', finalMaBan) // Bàn cũ, hoặc bàn mới nếu có đổi
+            .query(`
+                UPDATE DatBan 
+                SET NgayDat = @NgayDat, GioDat = @GioDat, SoNguoi = @SoNguoi, GhiChu = @GhiChu, MaBan = @MaBan 
+                WHERE MaDatBan = @ID
+            `);
+
+        res.json({ success: true, message: 'Cập nhật thông tin đặt bàn thành công!' });
+    } catch (err) {
+        console.error("Lỗi sửa đặt bàn:", err);
+        res.json({ success: false, message: 'Lỗi hệ thống khi sửa thông tin!' });
+    }
+});
 });
 
 // ==========================================
@@ -734,69 +694,61 @@ app.get('/orders', async (req, res) => {
         res.render('orders', { orders: result.recordset });
     } catch (err) { res.send('Lỗi'); }
 });
-app.get('/api/orders/:id', async (req, res) => {
+
+app.post('/orders/update-status', async (req, res) => {
+    const { maDon, sdt, tongTien, trangThaiMoi, tenKhach } = req.body;
     try {
         const pool = await poolPromise;
-        const result = await pool.request().input('MaDon', req.params.id)
-            .query(`SELECT sp.TenSP, ct.SoLuong, ct.DonGia, (ct.SoLuong * ct.DonGia) as ThanhTien FROM ChiTietDonOnline ct JOIN SanPham sp ON ct.MaSP = sp.MaSP WHERE ct.MaDon = @MaDon`);
-        res.json(result.recordset);
-    } catch (err) { res.status(500).json({ error: 'Lỗi' }); }
+        await pool.request().input('MaDon', maDon).input('TrangThai', trangThaiMoi).query("UPDATE DonHangOnline SET TrangThai = @TrangThai WHERE MaDon = @MaDon");
+        if (trangThaiMoi === 'Hoàn thành' && sdt) {
+            const diemCong = Math.floor(tongTien / 10000); 
+            const checkKhach = await pool.request().input('SDT', sdt).query("SELECT MaKH FROM KhachHang WHERE SoDienThoai = @SDT");
+            if (checkKhach.recordset.length > 0) {
+                await pool.request().input('SDT', sdt).input('Diem', diemCong).query("UPDATE KhachHang SET DiemTichLuy = DiemTichLuy + @Diem WHERE SoDienThoai = @SDT");
+            } else {
+                await pool.request().input('TenKH', tenKhach || 'Khách Online').input('SDT', sdt).input('Diem', diemCong)
+                    .query("INSERT INTO KhachHang (TenKH, SoDienThoai, DiemTichLuy) VALUES (@TenKH, @SDT, @Diem)");
+            }
+        }
+        res.json({ success: true, message: 'Đã cập nhật trạng thái đơn hàng!' });
+    } catch (err) { res.json({ success: false, message: 'Lỗi máy chủ!' }); }
 });
-app.post('/orders/update', async (req, res) => {
+
+app.get('/api/order-details/:maDon', async (req, res) => {
     try {
         const pool = await poolPromise;
-        await pool.request().input('MaDon', req.body.maDon).input('TrangThai', req.body.trangThai).query('UPDATE DonHangOnline SET TrangThai = @TrangThai WHERE MaDon = @MaDon');
-        res.redirect('/orders');
-    } catch (err) { res.send('Lỗi'); }
+        const result = await pool.request().input('MaHD', req.params.maDon).query(`
+            SELECT sp.TenSP, ct.SoLuong, ct.DonGia
+            FROM ChiTietDonOnline ct
+            JOIN SanPham sp ON ct.MaSP = sp.MaSP
+            WHERE ct.MaDon = @MaHD
+        `);
+        res.json({ success: true, items: result.recordset });
+    } catch (err) { res.json({ success: false }); }
 });
 
 // ==========================================
-//        12. HỆ THỐNG KHUYẾN MÃI (VOUCHER)
+//        12 & 13. KHUYẾN MÃI (VOUCHER)
 // ==========================================
 app.post('/api/check-voucher', async (req, res) => {
     const { maVoucher, tongTienDon } = req.body;
     try {
         const pool = await poolPromise;
-        const result = await pool.request()
-            .input('MaVoucher', maVoucher)
-            .query(`
-                SELECT * FROM KhuyenMai 
-                WHERE MaVoucher = @MaVoucher 
-                  AND TrangThai = 1 
-                  AND NgayKetThuc >= GETDATE()
-                  AND (SoLuong > 0 OR SoLuong = -1)
-            `);
-            
-        if (result.recordset.length === 0) {
-            return res.json({ success: false, message: 'Mã không tồn tại hoặc đã hết hạn!' });
-        }
+        const result = await pool.request().input('MaVoucher', maVoucher).query(`
+            SELECT * FROM KhuyenMai WHERE MaVoucher = @MaVoucher AND TrangThai = 1 AND NgayKetThuc >= GETDATE() AND (SoLuong > 0 OR SoLuong = -1)
+        `);
+        if (result.recordset.length === 0) return res.json({ success: false, message: 'Mã không tồn tại hoặc đã hết hạn!' });
         
         const voucher = result.recordset[0];
-        
-        if (tongTienDon < voucher.DonHangToiThieu) {
-            return res.json({ success: false, message: `Mã này chỉ áp dụng cho đơn từ ${voucher.DonHangToiThieu.toLocaleString('vi-VN')} đ` });
-        }
+        if (tongTienDon < voucher.DonHangToiThieu) return res.json({ success: false, message: `Mã này chỉ áp dụng cho đơn từ ${voucher.DonHangToiThieu.toLocaleString('vi-VN')} đ` });
         
         let tienGiam = (tongTienDon * voucher.PhanTramGiam) / 100;
-        if (voucher.SoTienGiamToiDa > 0 && tienGiam > voucher.SoTienGiamToiDa) {
-            tienGiam = voucher.SoTienGiamToiDa;
-        }
+        if (voucher.SoTienGiamToiDa > 0 && tienGiam > voucher.SoTienGiamToiDa) tienGiam = voucher.SoTienGiamToiDa;
         
-        res.json({ 
-            success: true, 
-            tienGiam: tienGiam,
-            message: `Áp dụng thành công! Đã giảm ${tienGiam.toLocaleString('vi-VN')} đ`
-        });
-    } catch (err) {
-        console.error('Lỗi check voucher:', err);
-        res.status(500).json({ success: false, message: 'Lỗi hệ thống khi check voucher' });
-    }
+        res.json({ success: true, tienGiam: tienGiam, message: `Áp dụng thành công! Đã giảm ${tienGiam.toLocaleString('vi-VN')} đ` });
+    } catch (err) { res.status(500).json({ success: false, message: 'Lỗi hệ thống' }); }
 });
-// ==========================================
-//        13. QUẢN LÝ KHUYẾN MÃI (ADMIN)
-// ==========================================
 
-// A. Hiển thị danh sách các Mã giảm giá
 app.get('/vouchers', async (req, res) => {
     try {
         const pool = await poolPromise;
@@ -804,170 +756,24 @@ app.get('/vouchers', async (req, res) => {
         res.render('vouchers', { vouchers: result.recordset });
     } catch (err) { res.send('Lỗi tải danh sách khuyến mãi'); }
 });
-
-// B. Admin Thêm mã giảm giá mới
 app.post('/vouchers/add', async (req, res) => {
     const { maVoucher, tenCT, phanTram, giamToiDa, donToiThieu, ngayKT } = req.body;
     try {
         const pool = await poolPromise;
         await pool.request()
-            .input('MaVoucher', maVoucher).input('TenChuongTrinh', tenCT)
-            .input('PhanTram', phanTram).input('ToiDa', giamToiDa)
-            .input('ToiThieu', donToiThieu).input('NgayKT', ngayKT)
-            .query(`INSERT INTO KhuyenMai (MaVoucher, TenChuongTrinh, PhanTramGiam, SoTienGiamToiDa, DonHangToiThieu, NgayKetThuc)
-                    VALUES (@MaVoucher, @TenChuongTrinh, @PhanTram, @ToiDa, @ToiThieu, @NgayKT)`);
+            .input('MaVoucher', maVoucher).input('TenChuongTrinh', tenCT).input('PhanTram', phanTram).input('ToiDa', giamToiDa).input('ToiThieu', donToiThieu).input('NgayKT', ngayKT)
+            .query(`INSERT INTO KhuyenMai (MaVoucher, TenChuongTrinh, PhanTramGiam, SoTienGiamToiDa, DonHangToiThieu, NgayKetThuc) VALUES (@MaVoucher, @TenChuongTrinh, @PhanTram, @ToiDa, @ToiThieu, @NgayKT)`);
         res.redirect('/vouchers');
-    } catch (err) { 
-        res.send('Lỗi thêm khuyến mãi (Có thể mã Voucher bị trùng, vui lòng chọn mã khác!)'); 
-    }
+    } catch (err) { res.send('Lỗi thêm khuyến mãi!'); }
 });
-
-// C. Admin Bật/Tắt trạng thái hoạt động của mã
 app.post('/vouchers/toggle', async (req, res) => {
     try {
         const pool = await poolPromise;
-        await pool.request()
-            .input('MaKM', req.body.maKM)
-            .input('TrangThai', req.body.trangThai)
-            .query('UPDATE KhuyenMai SET TrangThai = @TrangThai WHERE MaKM = @MaKM');
+        await pool.request().input('MaKM', req.body.maKM).input('TrangThai', req.body.trangThai).query('UPDATE KhuyenMai SET TrangThai = @TrangThai WHERE MaKM = @MaKM');
         res.redirect('/vouchers');
     } catch (err) { res.send('Lỗi cập nhật trạng thái'); }
 });
-// ==========================================
-// API QUẢN LÝ DANH MỤC & SẮP XẾP MÓN ĂN
-// ==========================================
 
-// 1. Cập nhật lại API lấy danh sách Sản phẩm (SẮP XẾP THEO DANH MỤC)
-app.get('/products', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const products = await pool.request().query(`
-            SELECT sp.*, dm.TenDM 
-            FROM SanPham sp 
-            LEFT JOIN DanhMuc dm ON sp.MaDM = dm.MaDM 
-            ORDER BY dm.TenDM ASC, sp.TenSP ASC -- Tự động nhóm các món cùng danh mục đứng cạnh nhau
-        `);
-        const categories = await pool.request().query('SELECT * FROM DanhMuc');
-        res.render('products', { products: products.recordset, categories: categories.recordset });
-    } catch (err) { res.send('Lỗi tải trang quản lý sản phẩm!'); }
-});
-
-// 2. Thêm Danh Mục mới
-app.post('/categories/add', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        await pool.request().input('TenDM', req.body.tenDM)
-            .query('INSERT INTO DanhMuc (TenDM) VALUES (@TenDM)');
-        res.redirect('/products');
-    } catch (err) { res.send('Lỗi thêm danh mục!'); }
-});
-
-// 3. Sửa Tên Danh Mục
-app.post('/categories/edit', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        await pool.request().input('MaDM', req.body.maDM).input('TenDM', req.body.tenDM)
-            .query('UPDATE DanhMuc SET TenDM = @TenDM WHERE MaDM = @MaDM');
-        res.redirect('/products');
-    } catch (err) { res.send('Lỗi sửa danh mục!'); }
-});
-
-// 4. Xóa Danh Mục
-app.post('/categories/delete', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        await pool.request().input('MaDM', req.body.maDM)
-            .query('DELETE FROM DanhMuc WHERE MaDM = @MaDM');
-        res.redirect('/products');
-    } catch (err) { 
-        res.send('<script>alert("❌ Lỗi: Không thể xóa Danh mục đang có món ăn bên trong! Hãy xóa hoặc chuyển danh mục các món ăn trước."); window.location.href="/products";</script>'); 
-    }
-});
-// ==========================================
-// API KHÁCH HÀNG ĐẶT BÀN ONLINE
-// ==========================================
-app.post('/api/book-table', async (req, res) => {
-    const { tenKhach, sdt, ngayDat, gioDat, soNguoi, ghiChu } = req.body;
-    try {
-        const pool = await poolPromise;
-        await pool.request()
-            .input('TenKhach', tenKhach)
-            .input('SDT', sdt)
-            .input('NgayDat', ngayDat)
-            .input('GioDat', gioDat)
-            .input('SoNguoi', soNguoi)
-            .input('GhiChu', ghiChu || '')
-            .query(`
-                INSERT INTO DatBan (TenKhach, SoDienThoai, NgayDat, GioDat, SoNguoi, GhiChu, TrangThai)
-                VALUES (@TenKhach, @SDT, @NgayDat, @GioDat, @SoNguoi, @GhiChu, N'Chờ xác nhận')
-            `);
-        res.json({ success: true, message: '🎉 Đặt bàn thành công! Quán sẽ sớm liên hệ để xác nhận.' });
-    } catch (err) {
-        console.error('Lỗi đặt bàn:', err);
-        res.json({ success: false, message: 'Lỗi hệ thống, vui lòng thử lại sau!' });
-    }
-});
-// ==========================================
-// QUẢN LÝ ĐƠN ONLINE (CẬP NHẬT & TÍCH ĐIỂM)
-// ==========================================
-app.post('/orders/update-status', async (req, res) => {
-    // Nhận dữ liệu từ nút bấm trên giao diện
-    const { maDon, sdt, tongTien, trangThaiMoi, tenKhach } = req.body;
-    
-    try {
-        const pool = await poolPromise;
-        
-        // 1. Cập nhật trạng thái đơn hàng
-        await pool.request()
-            .input('MaDon', maDon)
-            .input('TrangThai', trangThaiMoi)
-            .query("UPDATE HoaDon SET TrangThai = @TrangThai WHERE MaHD = @MaDon");
-
-        // 2. NGHIỆP VỤ TÍCH ĐIỂM: Chỉ chạy khi đơn đã "Hoàn thành" và có SĐT
-        if (trangThaiMoi === 'Hoàn thành' && sdt) {
-            const diemCong = Math.floor(tongTien / 10000); // 10.000đ = 1 điểm
-            
-            // Kiểm tra xem SĐT này đã có thẻ thành viên chưa
-            const checkKhach = await pool.request().input('SDT', sdt).query("SELECT MaKH FROM KhachHang WHERE SoDienThoai = @SDT");
-            
-            if (checkKhach.recordset.length > 0) {
-                // Khách cũ -> Cộng dồn điểm
-                await pool.request().input('SDT', sdt).input('Diem', diemCong)
-                    .query("UPDATE KhachHang SET DiemTichLuy = DiemTichLuy + @Diem WHERE SoDienThoai = @SDT");
-            } else {
-                // Khách mới -> Tạo thẻ thành viên mới cho khách Online
-                await pool.request()
-                    .input('TenKH', tenKhach || 'Khách Online')
-                    .input('SDT', sdt)
-                    .input('Diem', diemCong)
-                    .query("INSERT INTO KhachHang (TenKH, SoDienThoai, DiemTichLuy) VALUES (@TenKH, @SDT, @Diem)");
-            }
-        }
-
-        res.json({ success: true, message: 'Đã cập nhật trạng thái đơn hàng!' });
-    } catch (err) {
-        console.error('Lỗi cập nhật đơn:', err);
-        res.json({ success: false, message: 'Lỗi máy chủ!' });
-    }
-    // Lấy chi tiết các món ăn trong 1 Đơn hàng
-app.get('/api/order-details/:maDon', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('MaHD', req.params.maDon)
-            .query(`
-                SELECT sp.TenSP, ct.SoLuong, ct.DonGia
-                FROM ChiTietHoaDon ct
-                JOIN SanPham sp ON ct.MaSP = sp.MaSP
-                WHERE ct.MaHD = @MaHD
-            `);
-        res.json({ success: true, items: result.recordset });
-    } catch (err) {
-        console.error('Lỗi lấy chi tiết đơn:', err);
-        res.json({ success: false });
-    }
-});
-});
 // Chạy server
 app.listen(port, () => {
     console.log(`Server đang chạy tại http://localhost:${port}`);

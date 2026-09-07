@@ -90,16 +90,22 @@
                         <span class="fs-2 fw-bold text-danger" id="cartTotal">0 đ</span>
                     </div>
                     
-                    <!-- Nút LƯU TẠM và THANH TOÁN -->
+                    <!-- BỘ 3 NÚT: HỦY - LƯU - THANH TOÁN -->
                     <div class="row g-2">
-                        <div class="col-6">
-                            <button class="btn btn-warning btn-lg w-100 fw-bold py-3 shadow-sm text-dark" onclick="processOrder('save')">
-                                <i class="fas fa-save"></i> LƯU ORDER
+                        <div class="col-3">
+                            <!-- Nút Hủy Hóa Đơn -->
+                            <button class="btn btn-outline-danger w-100 fw-bold py-3 shadow-sm" onclick="promptCancelOrder()" title="Hủy hóa đơn">
+                                <i class="fas fa-trash-alt"></i> HỦY
                             </button>
                         </div>
-                        <div class="col-6">
-                            <button class="btn btn-success btn-lg w-100 fw-bold py-3 shadow-sm" onclick="processOrder('pay')">
-                                <i class="fas fa-check-circle"></i> THANH TOÁN
+                        <div class="col-4">
+                            <button class="btn btn-warning w-100 fw-bold py-3 shadow-sm text-dark" onclick="processOrder('save')">
+                                <i class="fas fa-save"></i> LƯU
+                            </button>
+                        </div>
+                        <div class="col-5">
+                            <button class="btn btn-success w-100 fw-bold py-3 shadow-sm" onclick="processOrder('pay')">
+                                <i class="fas fa-check-circle"></i> THU TIỀN
                             </button>
                         </div>
                     </div>
@@ -108,6 +114,29 @@
         </div>
     </div>
 
+    <!-- MODAL HỦY HÓA ĐƠN (GHI NHẬN LÝ DO) -->
+    <div class="modal fade" id="cancelOrderModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger border-2">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle"></i> Hủy Hóa Đơn</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-start">
+                    <div class="alert alert-warning small fw-bold">
+                        Lưu ý: Hành động này sẽ hủy hóa đơn hiện tại và xóa sạch món ăn của bàn này. Thao tác sẽ được lưu vào lịch sử hệ thống!
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">Lý do hủy đơn (*Bắt buộc):</label>
+                        <textarea class="form-control fw-bold border-danger text-danger" id="cancelReason" rows="3" placeholder="Ví dụ: Khách đổi ý bỏ về, Nhập sai bàn..." required></textarea>
+                    </div>
+                    <button type="button" class="btn btn-danger w-100 fw-bold shadow-sm py-2" onclick="confirmCancelOrder()">XÁC NHẬN HỦY BỎ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let cart = [];
         let currentSubtotal = 0; // Biến lưu tổng tiền để tính toán điểm
@@ -179,12 +208,9 @@
                 });
             }
             document.getElementById('cartItems').innerHTML = html;
-            
-            // Cập nhật biến tổng tiền để dùng tính điểm
             currentSubtotal = total; 
             document.getElementById('cartTotal').innerText = total.toLocaleString('vi-VN') + ' đ';
             
-            // Nếu có SĐT nhập sẵn, gọi hàm kiểm tra lại để cập nhật hiển thị điểm dự kiến cộng
             if(document.getElementById('khachPhone').value.trim()) {
                 checkCustomer();
             }
@@ -206,7 +232,7 @@
                         nameBox.style.display = 'none';
                         nameBox.value = result.data.TenKH;
                     } else {
-                        infoBox.innerHTML = `✨ Khách hàng mới! Sẽ được cộng <b>${Math.floor(currentSubtotal / 10000)} điểm</b>.`;
+                        infoBox.innerHTML = `✨ Khách mới! Sẽ được cộng <b>${Math.floor(currentSubtotal / 10000)} điểm</b>.`;
                         nameBox.style.display = 'block';
                         nameBox.value = '';
                     }
@@ -219,7 +245,6 @@
             let maBan = document.getElementById('maBan').value;
             if(!maBan) return alert('Vui lòng chọn Bàn trước!');
             
-            // Lấy thông tin Tích điểm
             let sdtKhach = document.getElementById('khachPhone').value.trim();
             let tenKhach = document.getElementById('khachName').value.trim();
 
@@ -227,13 +252,52 @@
                 return alert('Vui lòng nhập Tên cho khách hàng mới để tạo thẻ thành viên!');
             }
 
-            // Hỏi xác nhận nếu ấn Thanh toán
-            if(action === 'pay' && !confirm('Xác nhận thu tiền và In bill cho bàn này?')) return;
+            if(action === 'pay' && !confirm('Xác nhận thu tiền và Khóa hóa đơn cho bàn này?')) return;
 
             fetch('/pos/process', {
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
                 body: JSON.stringify({ maBan, cart, action, sdtKhach, tenKhach })
+            }).then(r => r.json()).then(res => {
+                if(res.success) { 
+                    alert(res.message); 
+                    location.reload(); 
+                } else {
+                    alert('Lỗi: ' + res.message);
+                }
+            });
+        }
+
+        // ==========================================
+        // 7. XỬ LÝ HỦY HÓA ĐƠN
+        // ==========================================
+        function promptCancelOrder() {
+            let maBan = document.getElementById('maBan').value;
+            if(!maBan) return alert('Vui lòng chọn Bàn trước!');
+            
+            // Lấy trạng thái của bàn đang chọn
+            const selectEl = document.getElementById('maBan');
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            
+            if(selectedOption.getAttribute('data-status') !== 'Đang phục vụ') {
+                return alert('Bàn này đang Trống, không có Hóa đơn nào để hủy!');
+            }
+
+            // Mở Popup yêu cầu nhập lý do
+            var cancelModal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+            cancelModal.show();
+        }
+
+        function confirmCancelOrder() {
+            let maBan = document.getElementById('maBan').value;
+            let lyDoHuy = document.getElementById('cancelReason').value.trim();
+            
+            if(!lyDoHuy) return alert("Bắt buộc phải nhập Lý do hủy để lưu vết hệ thống!");
+
+            fetch('/pos/process', {
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ maBan, cart: [], action: 'cancel', lyDoHuy: lyDoHuy })
             }).then(r => r.json()).then(res => {
                 if(res.success) { 
                     alert(res.message); 

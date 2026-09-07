@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8"><title>Đặt Bàn - Koi Cafe</title>
+    <meta charset="UTF-8">
+    <title>Quản Lý Đặt Bàn - Koi Cafe</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -13,7 +14,13 @@
         .nav-sidebar .nav-link i { width: 25px; text-align: center; margin-right: 8px; }
         .main-content { margin-left: 260px; padding: 20px 30px; }
         .topbar { background: white; height: 70px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; padding: 0 20px; margin-bottom: 30px; }
-        .card-custom { border-radius: 15px; border: none; box-shadow: 0 5px 15px rgba(0,0,0,0.05); overflow: hidden; background: white; }
+        
+        .nav-pills .nav-link { font-weight: bold; color: #495057; border-radius: 50px; padding: 10px 25px; margin-right: 10px; background: white; border: 1px solid #dee2e6; }
+        .nav-pills .nav-link.active { color: white !important; }
+        .nav-pills .nav-link[href="#tab-cho"].active { background-color: #dc3545; border-color: #dc3545; }
+        .nav-pills .nav-link[href="#tab-nhan"].active { background-color: #0dcaf0; border-color: #0dcaf0; }
+        .nav-pills .nav-link[href="#tab-xong"].active { background-color: #198754; border-color: #198754; }
+        .table-card { border-radius: 15px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background: white; padding: 20px;}
     </style>
 </head>
 <body>
@@ -22,41 +29,326 @@
         <div class="mt-4 pb-3 mb-3 border-bottom border-secondary text-center"><div class="text-white fw-bold">👨‍💼 Quản trị viên</div></div>
         <ul class="nav nav-sidebar flex-column">
             <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt"></i> Tổng Quan</a></li>
-            <li class="nav-item"><a class="nav-link text-white" href="/pos" style="background-color: #28a745;"><i class="fas fa-desktop"></i> POS Bán Hàng</a></li>
+            <li class="nav-item"><a class="nav-link" href="/pos"><i class="fas fa-desktop"></i> POS Bán Hàng</a></li>
             <li class="nav-item"><a class="nav-link" href="/orders"><i class="fas fa-motorcycle"></i> Đơn Giao Đi</a></li>
             <li class="nav-item"><a class="nav-link" href="/invoices"><i class="fas fa-file-invoice-dollar"></i> Hóa Đơn</a></li>
             <li class="nav-item"><a class="nav-link active" href="/bookings"><i class="fas fa-calendar-check"></i> Đặt Bàn</a></li>
             <li class="nav-item"><a class="nav-link" href="/vouchers"><i class="fas fa-ticket-alt"></i> Khuyến Mãi</a></li>
             <li class="nav-item"><a class="nav-link" href="/products"><i class="fas fa-coffee"></i> Sản Phẩm</a></li>
-            <!-- Bổ sung 2 dòng bị thiếu -->
             <li class="nav-item"><a class="nav-link" href="/tables"><i class="fas fa-chair"></i> Sơ Đồ Bàn</a></li>
             <li class="nav-item"><a class="nav-link" href="/employees"><i class="fas fa-users"></i> Nhân Sự</a></li>
+            <li class="nav-item mt-4 pt-3 border-top border-secondary"><a class="nav-link text-danger fw-bold" href="/logout"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a></li>
         </ul>
     </div>
+    
     <div class="main-content">
-        <div class="topbar"><h4 class="fw-bold text-dark m-0"><i class="fas fa-calendar-check text-success me-2"></i> YÊU CẦU ĐẶT BÀN</h4></div>
-        <div class="card-custom p-0">
-            <table class="table table-hover text-center align-middle mb-0">
-                <thead class="table-success text-dark">
-                    <tr><th>Mã</th><th>Khách Hàng</th><th>Giờ Đến</th><th>Số Người</th><th>Trạng Thái</th><th>Hành Động</th></tr>
-                </thead>
-                <tbody>
-                    <% bookings.forEach(function(b) { %>
-                        <tr>
-                            <td class="fw-bold">#<%= b.MaDatBan %></td>
-                            <td class="fw-bold"><%= b.TenKhachHang %><br><small><%= b.SoDienThoai %></small></td>
-                            <td class="fw-bold text-danger"><%= new Date('1970-01-01T' + b.GioDat).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}) %><br><small class="text-dark"><%= new Date(b.NgayDat).toLocaleDateString('vi-VN') %></small></td>
-                            <td><%= b.SoNguoi %></td>
-                            <td><span class="badge bg-warning text-dark"><%= b.TrangThai %></span></td>
-                            <td>
-                                <% if(b.TrangThai === 'Chờ xác nhận') { %>
-                                    <form action="/bookings/update" method="POST" class="d-inline"><input type="hidden" name="maDatBan" value="<%= b.MaDatBan %>"><input type="hidden" name="trangThai" value="Đã xác nhận"><button type="submit" class="btn btn-sm btn-success">✔️ Nhận</button></form>
-                                <% } %>
-                            </td>
-                        </tr>
-                    <% }); %>
-                </tbody>
-            </table>
+        <div class="topbar">
+            <h4 class="fw-bold text-dark m-0"><i class="fas fa-calendar-check text-warning me-2"></i> QUẢN LÝ ĐẶT BÀN</h4>
+            <button class="btn btn-outline-warning fw-bold text-dark" onclick="location.reload()"><i class="fas fa-sync-alt"></i> Làm Mới</button>
+        </div>
+
+        <ul class="nav nav-pills mb-4" id="bookingTabs">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="pill" href="#tab-cho">🔴 Yêu Cầu Mới</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab-nhan">🔵 Đã Xác Nhận</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="pill" href="#tab-xong">🟢 Lịch Sử</a></li>
+        </ul>
+
+        <div class="table-card">
+            <div class="tab-content">
+                
+                <!-- TAB 1: YÊU CẦU MỚI -->
+                <div class="tab-pane fade show active" id="tab-cho">
+                    <table class="table table-hover align-middle text-center">
+                        <thead class="table-danger"><tr><th>Mã</th><th>Khách Hàng</th><th>Thời Gian Đến</th><th>Số Người</th><th>Ghi Chú</th><th>Hành Động</th></tr></thead>
+                        <tbody>
+                            <% bookings.filter(b => b.TrangThai === 'Chờ xác nhận').forEach(function(b) { %>
+                                <tr>
+                                    <td class="fw-bold text-danger">#BK-<%= b.MaDatBan %></td>
+                                    <td><b><%= b.TenKhach %></b><br><span class="small text-muted"><%= b.SoDienThoai %></span></td>
+                                    <td class="fw-bold text-primary">
+                                        <%= new Date(b.NgayDat).toLocaleDateString('vi-VN') %><br>
+                                        <span class="text-danger"><%= new Date(b.GioDat).toISOString().substr(11, 5) %></span>
+                                    </td>
+                                    <td><span class="badge bg-dark fs-6"><%= b.SoNguoi %></span></td>
+                                    <td class="text-muted small"><%= b.GhiChu %></td>
+                                    <td>
+                                        <div class="d-flex justify-content-center gap-1 mb-1">
+                                            <button class="btn btn-sm btn-success fw-bold flex-grow-1" onclick="openAssignTableModal(<%= b.MaDatBan %>, <%= b.SoNguoi %>)"><i class="fas fa-chair"></i> Xếp Bàn</button>
+                                        </div>
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button class="btn btn-sm btn-outline-primary fw-bold flex-grow-1" 
+                                                    data-id="<%= b.MaDatBan %>" data-ten="<%= b.TenKhach %>" 
+                                                    data-ngay="<%= new Date(b.NgayDat).toISOString().split('T')[0] %>" 
+                                                    data-gio="<%= new Date(b.GioDat).toISOString().substr(11, 5) %>" 
+                                                    data-songuoi="<%= b.SoNguoi %>" data-ghichu="<%= b.GhiChu || '' %>" 
+                                                    data-trangthai="<%= b.TrangThai %>" onclick="openEditModal(this)"><i class="fas fa-edit"></i> Sửa</button>
+                                            <button class="btn btn-sm btn-outline-danger fw-bold flex-grow-1" onclick="updateBooking(<%= b.MaDatBan %>, 'Đã hủy')">Hủy</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 2: ĐÃ XÁC NHẬN -->
+                <div class="tab-pane fade" id="tab-nhan">
+                    <table class="table table-hover align-middle text-center">
+                        <thead class="table-info"><tr><th>Mã</th><th>Khách Hàng</th><th>Thời Gian Đến</th><th>Bàn Giữ</th><th>Ghi Chú</th><th>Hành Động</th></tr></thead>
+                        <tbody>
+                            <% bookings.filter(b => b.TrangThai === 'Đã xác nhận').forEach(function(b) { %>
+                                <tr>
+                                    <td class="fw-bold text-info">#BK-<%= b.MaDatBan %></td>
+                                    <td><b><%= b.TenKhach %></b><br><span class="small text-muted"><%= b.SoDienThoai %></span></td>
+                                    <td class="fw-bold text-primary">
+                                        <%= new Date(b.NgayDat).toLocaleDateString('vi-VN') %><br>
+                                        <span class="text-danger"><%= new Date(b.GioDat).toISOString().substr(11, 5) %></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark fs-6"><%= b.TenBan %></span><br>
+                                        <span class="small text-muted">(<%= b.SoNguoi %> khách)</span>
+                                    </td>
+                                    <td class="text-muted small"><%= b.GhiChu %></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info text-white fw-bold w-100 mb-1" onclick="updateBooking(<%= b.MaDatBan %>, 'Đã đến')"><i class="fas fa-user-check"></i> Check-in</button>
+                                        <div class="d-flex gap-1">
+                                            <button class="btn btn-sm btn-outline-dark fw-bold w-50" 
+                                                    data-id="<%= b.MaDatBan %>" data-ten="<%= b.TenKhach %>" 
+                                                    data-ngay="<%= new Date(b.NgayDat).toISOString().split('T')[0] %>" 
+                                                    data-gio="<%= new Date(b.GioDat).toISOString().substr(11, 5) %>" 
+                                                    data-songuoi="<%= b.SoNguoi %>" data-ghichu="<%= b.GhiChu || '' %>" 
+                                                    data-maban="<%= b.MaBan || '' %>" data-trangthai="<%= b.TrangThai %>" 
+                                                    onclick="openEditModal(this)"><i class="fas fa-edit"></i> Sửa</button>
+                                            <button class="btn btn-sm btn-outline-danger fw-bold w-50" onclick="updateBooking(<%= b.MaDatBan %>, 'Đã hủy')">Hủy</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 3: LỊCH SỬ -->
+                <div class="tab-pane fade" id="tab-xong">
+                    <table class="table table-hover align-middle text-center">
+                        <thead class="table-success"><tr><th>Mã</th><th>Khách Hàng</th><th>Thời Gian Đến</th><th>Bàn Phục Vụ</th><th>Trạng Thái</th></tr></thead>
+                        <tbody>
+                            <% bookings.filter(b => b.TrangThai === 'Đã đến' || b.TrangThai === 'Đã hủy').forEach(function(b) { %>
+                                <tr>
+                                    <td class="fw-bold text-success">#BK-<%= b.MaDatBan %></td>
+                                    <td><b><%= b.TenKhach %></b><br><span class="small text-muted"><%= b.SoDienThoai %></span></td>
+                                    <td class="fw-bold text-primary">
+                                        <%= new Date(b.NgayDat).toLocaleDateString('vi-VN') %><br>
+                                        <span class="text-danger"><%= new Date(b.GioDat).toISOString().substr(11, 5) %></span>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border"><%= b.TenBan || 'Không xếp bàn' %></span></td>
+                                    <td>
+                                        <% if(b.TrangThai === 'Đã đến') { %> <span class="badge bg-success">Thành công</span> 
+                                        <% } else { %> <span class="badge bg-secondary">Đã hủy</span> <% } %>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
-</body></html>
+
+    <!-- MODAL 1: CHỌN BÀN CHỐT ĐƠN -->
+    <div class="modal fade" id="assignTableModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-success border-2">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-chair"></i> Xếp Bàn Giữ Chỗ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <input type="hidden" id="assignBookingId">
+                    
+                    <div id="smartSuggestion" class="alert alert-info fw-bold text-start border-info mb-4" style="border-left: 5px solid #0dcaf0;">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">Chọn bàn Trống cho khách:</label>
+                        <select class="form-select fw-bold border-success text-center" id="assignTableSelect">
+                            <option value="">-- Chọn Bàn --</option>
+                            <!-- Đã sửa lại định dạng Option để tránh lặp từ "Bàn" và xóa dấu gạch ngang -->
+                            <% tables.forEach(function(b) { %>
+                                <option value="<%= b.MaBan %>"><%= b.KhuVuc ? b.KhuVuc + ' - ' : '' %><%= b.TenBan %> (Loại <%= b.SucChua || 4 %> chỗ)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-success w-100 fw-bold shadow-sm py-2" onclick="confirmAssignTable()">XÁC NHẬN CHỐT BÀN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SỬA THÔNG TIN ĐẶT BÀN -->
+    <div class="modal fade" id="editBookingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-warning border-2">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-edit"></i> Chỉnh Sửa Đặt Bàn</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="editBookingId">
+                    <input type="hidden" id="editStatus">
+                    
+                    <div class="mb-3">
+                        <label class="fw-bold small text-muted">Khách Hàng</label>
+                        <input type="text" class="form-control fw-bold bg-light" id="editTenKhach" readonly>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="fw-bold small text-muted">Ngày đến</label>
+                            <input type="date" class="form-control fw-bold" id="editDate" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="fw-bold small text-muted">Giờ đến</label>
+                            <input type="time" class="form-control fw-bold" id="editTime" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-muted">Số người thực tế</label>
+                        <input type="number" class="form-control fw-bold text-danger" id="editGuests" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold small text-muted">Ghi chú</label>
+                        <textarea class="form-control" id="editNote" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-4 p-3 bg-light border rounded" id="editTableContainer" style="display: none;">
+                        <label class="fw-bold text-success mb-2"><i class="fas fa-exchange-alt"></i> Đổi Bàn Khác (Tùy chọn)</label>
+                        <select class="form-select fw-bold" id="editTableSelect">
+                            <option value="">-- Giữ nguyên bàn hiện tại --</option>
+                            <!-- Đã sửa lại định dạng Option để tránh lặp từ "Bàn" và xóa dấu gạch ngang -->
+                            <% tables.forEach(function(b) { %>
+                                <option value="<%= b.MaBan %>"><%= b.KhuVuc ? b.KhuVuc + ' - ' : '' %><%= b.TenBan %> (Trống, Loại <%= b.SucChua || 4 %> chỗ)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-warning w-100 fw-bold shadow-sm" onclick="submitEditBooking()">LƯU THAY ĐỔI</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openAssignTableModal(id, soNguoi) {
+            document.getElementById('assignBookingId').value = id;
+            
+            let guide = "";
+            if (soNguoi >= 1 && soNguoi <= 2) guide = "1 bàn 2";
+            else if (soNguoi >= 3 && soNguoi <= 4) guide = "1 bàn 4";
+            else if (soNguoi >= 5 && soNguoi <= 6) guide = "1 bàn 6";
+            else if (soNguoi >= 7 && soNguoi <= 8) guide = "Ghép 2 bàn 4 hoặc 2 + 6";
+            else if (soNguoi >= 9 && soNguoi <= 10) guide = "Ghép 4 + 6";
+            else guide = "Ghép nhiều bàn nếu quán còn đủ";
+
+            document.getElementById('smartSuggestion').innerHTML = `
+                <div class="mb-1 text-dark">Khách yêu cầu cho: <span class="text-danger fs-5">${soNguoi} người</span></div>
+                <div class="text-primary mt-2"><i class="fas fa-lightbulb text-warning fs-5"></i> Cách xếp bàn chuẩn: <br>
+                <b class="fs-5 text-success">-> ${guide}</b></div>
+            `;
+
+            var myModal = new bootstrap.Modal(document.getElementById('assignTableModal'));
+            myModal.show();
+        }
+
+        function confirmAssignTable() {
+            const id = document.getElementById('assignBookingId').value;
+            const maBan = document.getElementById('assignTableSelect').value;
+            if(!maBan) return alert("Vui lòng chọn 1 bàn để giữ chỗ cho khách!");
+            fetch('/bookings/update-status', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status: 'Đã xác nhận', maBan })
+            }).then(res => res.json()).then(data => {
+                if(data.success) location.reload(); else alert(data.message);
+            });
+        }
+        
+        function updateBooking(id, status) {
+            if(confirm(`Xác nhận chuyển yêu cầu này sang trạng thái: ${status}?`)) {
+                fetch('/bookings/update-status', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, status })
+                }).then(res => res.json()).then(data => {
+                    if(data.success) location.reload(); else alert(data.message);
+                });
+            }
+        }
+
+        function openEditModal(btnElement) {
+            const id = btnElement.getAttribute('data-id');
+            const ten = btnElement.getAttribute('data-ten');
+            const ngay = btnElement.getAttribute('data-ngay');
+            const gio = btnElement.getAttribute('data-gio');
+            const songuoi = btnElement.getAttribute('data-songuoi');
+            const ghichu = btnElement.getAttribute('data-ghichu');
+            const maban = btnElement.getAttribute('data-maban');
+            const trangthai = btnElement.getAttribute('data-trangthai');
+
+            document.getElementById('editBookingId').value = id;
+            document.getElementById('editStatus').value = trangthai;
+            document.getElementById('editTenKhach').value = ten;
+            document.getElementById('editDate').value = ngay;
+            document.getElementById('editTime').value = gio;
+            document.getElementById('editGuests').value = songuoi;
+            document.getElementById('editNote').value = ghichu;
+
+            const tableContainer = document.getElementById('editTableContainer');
+            if (trangthai === 'Đã xác nhận') {
+                tableContainer.style.display = 'block';
+                document.getElementById('editTableSelect').value = ''; 
+                let select = document.getElementById('editTableSelect');
+                if(!select.querySelector('.old-table-opt')) {
+                    let opt = document.createElement('option');
+                    opt.value = maban;
+                    opt.text = "-- Đang giữ Bàn hiện tại --";
+                    opt.className = "old-table-opt";
+                    opt.selected = true;
+                    select.add(opt, select[0]);
+                } else {
+                    select.querySelector('.old-table-opt').value = maban;
+                    select.querySelector('.old-table-opt').selected = true;
+                }
+            } else {
+                tableContainer.style.display = 'none';
+            }
+
+            var editModal = new bootstrap.Modal(document.getElementById('editBookingModal'));
+            editModal.show();
+        }
+
+        function submitEditBooking() {
+            const data = {
+                id: document.getElementById('editBookingId').value,
+                trangThaiHienTai: document.getElementById('editStatus').value,
+                ngayDat: document.getElementById('editDate').value,
+                gioDat: document.getElementById('editTime').value,
+                soNguoi: document.getElementById('editGuests').value,
+                ghiChu: document.getElementById('editNote').value,
+                maBanMoi: document.getElementById('editTableSelect').value 
+            };
+
+            if(!data.ngayDat || !data.gioDat || !data.soNguoi) {
+                return alert("Vui lòng điền đủ Ngày, Giờ và Số người!");
+            }
+
+            fetch('/bookings/edit-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(res => res.json()).then(result => {
+                if(result.success) location.reload();
+                else alert(result.message);
+            });
+        }
+    </script>
+</body>
+</html>
